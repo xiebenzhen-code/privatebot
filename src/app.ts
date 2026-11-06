@@ -445,6 +445,8 @@ on('GET', '/api/tasks/:id/asks', (c) => ({ json: listAsks(idOf(c)) }));
 on('POST', '/api/runner/tasks/:id/progress', (c) => ({ json: reportProgress(idOf(c), c.body ?? {}) }));
 on('POST', '/api/runner/tasks/:id/finish', (c) => {
   const r = finishTask(idOf(c), (c.body ?? {}) as any);
+  // 046.8：重发的同一次收尾：已经处理过，不再推送、不再回写 Issue。
+  if ((r as any).duplicate) return { json: { ok: true, task_id: r.task.id, status: r.task.status, approval_id: null, duplicate: true } };
   if (r.approval_id) void notifyApproval(getApproval(r.approval_id));
   // 029: 失败必推、完成看开关；去重和每天上限都在 notifyTaskResult 里。
   void notifyTaskResult(r.task.id).catch(() => 0);

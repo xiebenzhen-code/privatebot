@@ -22,7 +22,8 @@ import { deployDirs, needsDeploy, runDeploy, shouldDeploy } from './lib/deploy.m
 import { githubRelayRound } from './lib/github-relay.mjs';
 import { getProvider } from './lib/sandbox/provider.mjs';
 import { parseAsk, resumeArgs, resumeData, resumeLost, resumeMessage } from './lib/ask.mjs';
-import { anySandbox, applySandboxPatch, flagLine, runInSandbox, sandboxModeFor, sandboxPlan } from './lib/sandbox/run.mjs';
+import { anySandbox, applySandboxPatch, createSlots, diskLimitMb, flagLine, runInSandbox, sandboxCap, sandboxModeFor, sandboxPlan } from './lib/sandbox/run.mjs';
+import { normalizeLimits } from './lib/sandbox/docker-args.mjs';
 import { fileURLToPath } from 'node:url';
 
 const HOME = homedir();
@@ -46,6 +47,8 @@ const BUSY_FILE = join(LOG_DIR, 'runner.busy');
 // 它们只是在轮询审批，不花模型额度，不能因为你没空批就把后面的活全堵住。
 //
 // 本机的 Git 调用同步串行。跨审批等待用不可变快照协调推送与其它任务的合并。
+// 046.7：同时在跑的沙箱数。编码名额（maxParallel）之外再按内存卡一道。
+export const sandboxSlots = createSlots();
 export const inFlight = new Map(); // task id → 'coding' | 'waiting'
 let draining = false;
 let deployTail = Promise.resolve();
@@ -696,6 +699,25 @@ function config() {
   }
   if (!token) throw new Error('缺少工作台令牌：填配置里的 token，或 ~/.ai-workbench.json');
   return { ...cfg, token, workbench: String(cfg.workbench).replace(/\/+$/, '') };
+}
+
+/**
+ * 046.8：收尾上报不能丢。压力测试时工作台忙，finish 遇到 fetch failed，任务就一直挂在「运行中」。
+ * 断网、超时、5xx 都重发（同一个 finish_key，工作台收过就不再处理）；4xx 是工作台明确拒绝，不重发。
+ */
+export async function finishReliably(call, cfg, taskId, body, { waits = [2_000, 5_000, 15_000, 30_000, 60_000, 120_000], sleep = (ms) => new Promise((r) => setTimeout(r, ms)), say = () => {} } = {}) {
+  const payload = { ...body, finish_key: body.finish_key ?? `T${Number(taskId)}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}` };
+  for (let i = 0; ; i++) {
+    try {
+      return await call(cfg, 'POST', `/api/runner/tasks/${taskId}/finish`, payload);
+    } catch (err) {
+      const msg = String(err?.message ?? err);
+      const refused = / → 4\d\d /.test(msg);
+      if (refused || i >= waits.length) throw err;
+      say(`回报 finish 失败（${msg.slice(0, 80)}），${Math.round(waits[i] / 1000)} 秒后重发`);
+      await sleep(waits[i]);
+    }
+  }
 }
 
 async function api(cfg, method, path, body) {
@@ -1457,13 +1479,21 @@ export async function runTask(cfg, task) {
         if (!av.ok) problem = av.why;
       } catch (err) { problem = err.message; }
     }
+    let diskMb = 0;
+    let cap = 1;
+    if (!problem) {
+      try {
+        diskMb = diskLimitMb(cfg);
+        cap = sandboxCap({ maxParallel: maxParallel(cfg), memTotalMb: provider.memTotalMb?.() ?? null, agentMemMb: normalizeLimits(cfg.sandboxLimits ?? {}).limits.memoryMb });
+      } catch (err) { problem = err.message; }
+    }
     if (problem) {
       await api(cfg, 'POST', `/api/runner/tasks/${task.id}/finish`, { result: 'failed', sandbox: 'docker', summary: `沙箱：${problem}（执行器配了 sandbox: docker，不会退回宿主上跑）` });
       removeWorktree(resolve(project), dir);
       log(`T-${task.id} 沙箱进不去：${problem}`);
       return;
     }
-    sandbox = { provider, plan };
+    sandbox = { provider, plan, diskMb, cap };
     log(`T-${task.id} 在沙箱里跑（${cfg.sandboxImage || 'wb-sandbox:latest'}，出网白名单 ${plan.egress.allow.length} 项）`);
   }
 
@@ -1543,6 +1573,7 @@ export async function runTask(cfg, task) {
   // 055.2：这次运行用的会话号（最后一次说了算）。提问时报给工作台，接着干要用它。
   let sessionId = '';
   let step = '启动';
+  let queued = false; // 046.9：在等沙箱名额
   const maxMinutes = Number(cfg.maxMinutes ?? 45);
   await api(cfg, 'POST', `/api/runner/tasks/${task.id}/progress`, { step, progress: 5, branch });
   if (usesCodebuddy && !cbWrite) {
@@ -1562,6 +1593,8 @@ export async function runTask(cfg, task) {
   const ticker = setInterval(() => {
     if (stopped) return; // one stop, one approval — no repeated budget calls while it winds down
     void api(cfg, 'POST', `/api/runner/tasks/${task.id}/progress`, { step, tokens_used: tokens }).catch(() => {});
+    // 046.9：排队等沙箱名额时还没开跑，不查预算闸（不然排久了会被当成单任务超时）。
+    if (queued) return;
     // 007 budget gate: the workbench knows the per-executor caps, we only know the running totals.
     // It answers { gated } and, when over, parks an approval for 继续 / 终止.
     void api(cfg, 'POST', `/api/runner/tasks/${task.id}/budget`, { tokens }).then((r) => {
@@ -1602,16 +1635,32 @@ export async function runTask(cfg, task) {
     // 036：dsh 的参数、事件格式和环境都是自己的，不能沿用 Claude Code 那套。
     // 046.3：沙箱里跑。事件格式和宿主上的 Claude Code 一样，按行解析后走同一个 onMsg。
     if (sandbox) {
-      return runInSandbox({
+      // 046.7：先拿沙箱名额（内存装不下就排队），拿到才起容器；跑完不管成败都还回去。
+      // 046.8：等位时页面上要看得出是在排队，不是在跑。
+      // 046.9：写进外层的 step——每隔一会儿上报的 ticker 读的是它，局部变量会被 ticker 用「启动」盖回去。
+      const wait = () => {
+        queued = true;
+        step = `排队等沙箱名额（同时最多 ${sandbox.cap} 个）`;
+        log(`T-${task.id} ${step}`);
+        void api(cfg, 'POST', `/api/runner/tasks/${task.id}/progress`, { step }).catch(() => {});
+      };
+      return sandboxSlots.acquire(sandbox.cap, wait).then((release) => {
+        if (queued) {
+          queued = false;
+          step = '拿到沙箱名额，开跑';
+          void api(cfg, 'POST', `/api/runner/tasks/${task.id}/progress`, { step }).catch(() => {});
+        }
+        return release;
+      }).then((release) => runInSandbox({
         provider: sandbox.provider, task, project: resolve(project), branch, plan: sandbox.plan, prompt,
-        timeoutMs: maxMinutes * 60_000, gitRun: git,
+        timeoutMs: maxMinutes * 60_000, gitRun: git, diskMb: sandbox.diskMb,
         onBox: (box) => { killChild = () => { void box.destroy(); }; },
         onLine: (line) => {
           const parsed = parseStreamLine(line);
           if (parsed) onMsg(parsed);
           else if (line.trim()) onMsg({ kind: 'raw', step: line.trim().slice(0, 120), tokens: 0 });
         },
-      }).then((r) => { sandboxOut = r; return { code: r.code, killed: r.killed }; });
+      }).finally(release)).then((r) => { sandboxOut = r; return { code: r.code, killed: r.killed }; });
     }
     const isDsh = b.tool === 'dsh';
     // 037：codebuddy 的事件形状和 Claude Code 一样（init / assistant / result），提示词的传法不同。
@@ -1783,7 +1832,7 @@ export async function runTask(cfg, task) {
       }
     }
   }
-  const closed = await api(cfg, 'POST', `/api/runner/tasks/${task.id}/finish`, {
+  const closed = await finishReliably(api, cfg, task.id, {
     result: failed ? 'failed' : 'done',
     slot: usedSlot?.name ?? '',
     harness: harnessOf(backendUsed),
@@ -1801,7 +1850,7 @@ export async function runTask(cfg, task) {
     changed_files: noChanges ? [] : taskFiles(dir, git),
     denials: [...denials],
     tokens_used: tokens, // 045.1：同上
-  }).catch((err) => { log(`回报 finish 失败：${err.message}`); return null; });
+  }, { say: (t) => log(`T-${task.id} ${t}`) }).catch((err) => { log(`T-${task.id} 回报 finish 重发后仍失败，任务会停在「运行中」，执行器重启后由工作台重置：${err.message}`); return null; });
 
   if (failed) {
     removeWorktree(resolve(project), dir); // 031a: branch stays (never auto-deleted), worktree goes
@@ -1813,7 +1862,7 @@ export async function runTask(cfg, task) {
     removeWorktree(resolve(project), dir);
     try { git(resolve(project), 'branch', '-D', branch); } catch { /* 分支可能已经被上一个清理删掉 */ }
     // 043 F：工作台可能判成「没干活」——日志跟着工作台说，不自己宣布完成。
-    const judged = closed?.task?.status === 'failed' ? `没算完成：${closed.task.fail_reason ?? ''}` : `完成：没有改动，不需要合并（结果 ${resultText.length} 字）`;
+    const judged = (closed?.status ?? closed?.task?.status) === 'failed' ? `没算完成：${closed?.task?.fail_reason ?? '工作台判成没干活'}` : `完成：没有改动，不需要合并（结果 ${resultText.length} 字）`;
     log(`T-${task.id} ${judged}`);
     return;
   }
@@ -2519,8 +2568,13 @@ async function main() {
   // 046.3：上次崩溃留下的沙箱（容器、卷、网络），开工前清掉——此刻还没有在跑的任务。
   if (anySandbox(cfg)) {
     try {
-      const removed = await getProvider('docker', { image: cfg.sandboxImage || 'wb-sandbox:latest' }).sweepOrphans([]);
+      const pv = getProvider('docker', { image: cfg.sandboxImage || 'wb-sandbox:latest' });
+      const removed = await pv.sweepOrphans([]);
       if (removed.length) log(`清掉上次留下的沙箱：${removed.join('、')}`);
+      // 046.7：开工时说一声按内存算出来的沙箱名额和磁盘上限，压力测试时对得上号。
+      const mem = pv.memTotalMb();
+      const cap = sandboxCap({ maxParallel: maxParallel(cfg), memTotalMb: mem, agentMemMb: normalizeLimits(cfg.sandboxLimits ?? {}).limits.memoryMb });
+      log(`沙箱：同时最多 ${cap} 个（Docker 内存 ${mem ?? '读不出'} MB），每个 /work 上限 ${diskLimitMb(cfg)} MB`);
     } catch (err) { log(`扫沙箱残留失败：${err.message}`); }
   }
 

@@ -1,6 +1,6 @@
 {
   "name": "ai-workbench",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "author": "谢本桢",
   "description": "个人 AI 工作台：派发与审批 coding agent 任务、亲自处理的待办、用量与机器数据。零依赖，Node 22 内置 HTTP + SQLite。",

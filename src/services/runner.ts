@@ -469,6 +469,8 @@ export type FinishInput = {
   limit?: { kind?: string; resetAt?: string | null; raw?: string };
   /** 046.3：这次在哪跑：none（宿主上）/ docker（第一档沙箱）。别的值一律当 none。 */
   sandbox?: string;
+  /** 046.8：同一次收尾的重发都带同一个键；已经收过就原样返回，不再动任何东西。 */
+  finish_key?: string;
 };
 
 const LIMIT_KINDS: Record<string, string> = { session: '五小时窗口的', weekly: '本周的', other: '' };
@@ -544,6 +546,9 @@ export function listTaskLog(taskId: number, limit = TASK_LOG_MAX): { ts: string;
 export function finishTask(id: number, input: FinishInput): { task: Task; approval_id?: number } {
   const task = getTask(id);
   if (!task) throw new HttpError(404, `没有任务 T-${id}`);
+  const finishKey = /^[A-Za-z0-9_-]{8,64}$/.test(String(input.finish_key ?? '')) ? String(input.finish_key) : '';
+  if (finishKey && (task as any).finish_key === finishKey) return { task, duplicate: true } as any;
+  if (finishKey) db().prepare('UPDATE tasks SET finish_key = ? WHERE id = ?').run(finishKey, id);
   if (input.result === 'limited') {
     const r = finishLimited(task, input);
     if (r) return r;

@@ -14,7 +14,7 @@ import { createInterface } from 'node:readline';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { BACKENDS, EXIT, checkProject, defaultProjectsRoot, parseArgs, probeBackend, redact, resolveProjectsRoot, runUnattended } from './lib/setup-core.mjs';
+import { BACKENDS, EXIT, checkProject, defaultProjectsRoot, ensureStarterProject, parseArgs, probeBackend, redact, resolveProjectsRoot, runUnattended } from './lib/setup-core.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const NODE_MIN = [22, 18];
@@ -97,6 +97,17 @@ const io = {
   configPath: join(homedir(), '.ai-workbench-runner.json'),
   port: Number(process.env.WB_PORT ?? 3200),
   generateToken: () => randomBytes(24).toString('hex'),
+  // 058：第一个项目。只在一个新建的空文件夹里跑 git，作者写死成通用名字，不读也不改用户的 git 配置。
+  gitInit: (dir) => {
+    const git = (...a) => {
+      const r = spawnSync('git', ['-c', 'user.name=PrivateBot', '-c', 'user.email=privatebot@localhost', '-c', 'commit.gpgsign=false', ...a], { cwd: dir, encoding: 'utf8', windowsHide: true });
+      if (r.status !== 0) throw new Error((r.stderr || r.error?.message || `git ${a[0]} 失败`).trim().slice(0, 200));
+    };
+    git('init', '-q', '-b', 'main');
+    writeFileSync(join(dir, 'README.md'), '# 第一个项目\n\n工作台装好时自动建的。在工作台里派活时，「项目」选 first，AI 就在这个文件夹里干活。\n\n想用自己的文件夹，重新跑一次 `npm run setup` 加上它。\n');
+    git('add', 'README.md');
+    git('commit', '-q', '-m', '第一个项目');
+  },
   generatePassword: () => `${randomBytes(9).toString('base64url')}${randomBytes(4).toString('hex')}`.slice(0, 20),
 };
 
@@ -129,7 +140,7 @@ async function interactive() {
   // projects
   const projects = [];
   for (;;) {
-    const path = await ask(projects.length ? '再加一个项目？输入路径，回车跳过：' : '要让 AI 改哪个仓库？输入本机路径，回车跳过：');
+    const path = await ask(projects.length ? '再加一个项目？输入路径，回车跳过：' : '要让 AI 改哪个仓库？输入本机路径；没有就回车，给你建一个空的：');
     if (!path) break;
     const check = checkProject(path, io);
     if (!check.ok) { say(`  ✗ ${check.problems.join('；')}，再试一次`); continue; }
@@ -137,13 +148,15 @@ async function interactive() {
     projects.push({ name, path });
     say(`  ✓ 记下 ${name}`);
   }
-  if (!projects.length && !opts.dryRun) {
-    say('没有项目也行，但执行器暂时没活可干。以后运行 `npm run setup` 再补。');
-  }
-
   // 030 A.3：网页上点「新建项目」就往这个文件夹里建。不问的话，功能一直是「先配一个根目录」。
   const projectsRoot = resolveProjectsRoot(await ask('\n新项目放在哪个文件夹？', defaultProjectsRoot()));
   say(`  新项目会建在 ${projectsRoot} 下面（只能是它的直接子文件夹）`);
+  // 058：一个项目都没给，就建一个空的当第一个项目，不让人卡在「先去学 git」。
+  if (!projects.length) {
+    const r = ensureStarterProject({ projectsRoot, dryRun: opts.dryRun }, io);
+    say(r.ok ? `  ✓ ${r.detail}` : `  ✗ ${r.detail}`);
+    if (r.ok) projects.push(r.project);
+  }
 
   // backend
   let backend = 'deepseek';

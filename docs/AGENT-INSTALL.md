@@ -48,7 +48,7 @@ Node 低于 22.18 就别往下走了：`npm start` 会直接报错，装完也�
 
 | # | 问什么 | 说明 |
 |---|---|---|
-| 1 | 要让 AI 改哪个本机仓库？给我**完整路径**，再给它起一个**短名** | **必填，不能空**（缺了会直接退出码 1，不会挂在那儿等）。短名只用字母、数字、`-`、`_`，就是以后任务表单「项目」里要填的值。路径要存在、是 git 仓库 |
+| 1 | 有没有现成的代码仓库要让 AI 改？有就给**完整路径**和一个**短名** | **可以没有**——大多数人没有，就别追问。不给 `--project`，安装脚本会在 `~/ai-projects/first` 建一个空仓库当第一个项目，用户以后在网页上「＋ 新建项目」或重跑 setup 再加。给了的话：短名只用字母、数字、`-`、`_`；路径要存在、是 git 仓库 |
 | 2 | 用哪家模型接口：DeepSeek 官方 / 阿里云百炼 / 自定义 | 默认 DeepSeek 官方 |
 | 3 | key 怎么给我 | **让用户把 key 放进一个文件（例如 `~/.wb-key`），或者设成环境变量。不要让用户贴进聊天** |
 | 4 | 要不要装自动备份、手机访问、GitHub Issue 通道 | 默认都**不装**，以后在网页设置里加 |
@@ -120,7 +120,7 @@ node scripts/setup.mjs --yes --json --project my-app=/path/to/repo --backend dee
 
 `--start` 只把选择写进配置，**不会真的替你启动**，启动还是走 3.3。
 
-项目那一步不能跳：`--project` 必须写成 `短名=路径`，两半都不能少；缺了直接退出码 1，不会停在那儿等输入。
+用户没有现成仓库就**去掉 `--project`**，别替他找、别 `git init` 他的文件夹：脚本验过 key 之后自己建 `~/ai-projects/first`（事件 `{"step":"project","status":"created"}`），重复跑会直接复用。`~/ai-projects/first` 已经存在但不是仓库时退出码 3，问用户换个位置（`--projects-root`）。给 `--project` 时必须写成 `短名=路径`，两半都不能少。
 
 ### 3.3 启动工作台
 
@@ -204,7 +204,7 @@ Invoke-RestMethod -Uri http://localhost:3200/api/setup/status -Headers @{ Author
 | `--check` 说「找不到 claude」 | 没装 Claude Code | 让用户装，装完重开终端 |
 | `backend` 一步退出码 3，`detail` 说「key 不对」 | key 错了 / 没开通这个模型 / 用错了站（国内站和国际站 key 不通用） | 让用户确认 key 和站别；百炼的 key 只能在百炼用 |
 | `detail` 说「地址或模型名不对」 | `--base-url` 少写或多写了 `/v1` | 地址写到 `/v1` **之前**，例如 `https://api.deepseek.com/anthropic` |
-| 清单里 `projects` 一直是 false | 执行器没在跑，或配置里没有项目 | 先跑执行器；没有项目就重跑 setup 加 `--project` |
+| 清单里 `projects` 一直是 false | 执行器没在跑，或配置里没有项目 | 先跑执行器；没有项目就重跑 setup（不带 `--project` 会建 `~/ai-projects/first`） |
 | 清单里 `runner` 变回 false | 执行器窗口被关了，或机器睡眠 | 重新 `node scripts/runner-guard.mjs`；想开机自启见 `docs/INSTALL-WINDOWS.md` |
 | 敲了守卫，输出「另一个 runner 还活着…这次跳过」 | 已经有一个在跑（多半是开机自启那个） | 不用管，这个是正常的；要看输出就用原来那个窗口 |
 | PowerShell 说「无法将“node”项识别为…」 | Node 没装，或装完没重开终端 | 装 Node 22.18+，**重开** PowerShell 再试 |

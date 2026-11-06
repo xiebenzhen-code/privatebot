@@ -575,6 +575,9 @@ export const MIGRATIONS: string[] = [
   );
   CREATE INDEX idx_task_asks_task ON task_asks(task_id, status);
   `,
+  // 046.8：收尾上报的幂等键。执行器回报 finish 遇到断网会重发，同一个键第二次到达时什么都不做——
+  // 否则会多建一条合并审批、多记一条日志。
+  `ALTER TABLE tasks ADD COLUMN finish_key TEXT NOT NULL DEFAULT ''`,
 ];
 
 export function openDb(file: string = process.env.WB_DB ?? './data/workbench.db', opts: { at?: number } = {}): DB {

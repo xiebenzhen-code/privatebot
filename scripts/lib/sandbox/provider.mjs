@@ -229,6 +229,16 @@ export class DockerProvider {
         if (ls.size > maxBytes) throw new Error('拷出来的文件超过上限');
         return dest;
       },
+      /** 046.7：/work 用了多少 MB。Docker Desktop 不能按容器限磁盘，只能自己量；量不出来返回 null。 */
+      async diskUsedMb() {
+        alive();
+        // 有读不了的文件时 du 会返回非 0，但总数照样打出来，所以只看输出。
+        const r = docker(['exec', name, 'du', '-sxk', '/work'], { timeoutMs: 30_000 });
+        const m = /^(\d+)\s/m.exec(r.stdout ?? '');
+        return m ? Math.ceil(Number(m[1]) / 1024) : null;
+      },
+      /** 046.7：立刻停掉容器里正在跑的东西（docker exec 随之返回）。容器本身留给 destroy 删。 */
+      async kill() { if (!destroyed) docker(['kill', name]); },
       async pause() { alive(); docker(['pause', name]); },
       async resume() { alive(); docker(['unpause', name]); },
       async destroy() {
@@ -243,6 +253,13 @@ export class DockerProvider {
       },
       info: () => ({ id: name, provider: 'docker', tier: 1, startedAt, taskId }),
     };
+  }
+
+  /** 046.7：Docker 那台虚拟机（WSL2）一共有多少内存，MB。读不出来返回 null。 */
+  memTotalMb() {
+    const r = this.docker(['info', '--format', '{{.MemTotal}}'], { timeoutMs: 15_000 });
+    const n = Number(String(r.stdout ?? '').trim());
+    return r.code === 0 && Number.isFinite(n) && n > 0 ? Math.floor(n / 1024 / 1024) : null;
   }
 
   /** 执行器启动时调：按标签找出对不上任何在跑任务的沙箱，全部删掉。返回删了什么。 */

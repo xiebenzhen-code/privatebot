@@ -239,6 +239,36 @@ export function mergeRunnerConfig(existing, input) {
 /** A stable runner id per machine+config, so restarts show up as one runner, not five. */
 export const runnerIdFor = (seed) => `runner-${createHash('sha256').update(String(seed)).digest('hex').slice(0, 6)}`;
 
+// ---------- 058 · 第一个项目 ----------
+
+export const STARTER_NAME = 'first';
+
+/**
+ * 没给 --project 时的默认项目：<projectsRoot 或 ~/ai-projects>/first。
+ * 已经是能用的仓库就直接用（重复跑 setup 安全）；文件夹在但不是仓库就停下，不动用户的东西；
+ * 不存在才新建：建文件夹、git init、写一份 README、提交到 main（io.gitInit 做）。
+ */
+export function ensureStarterProject(opts, io) {
+  const root = opts.projectsRoot || defaultProjectsRoot(io.homedir);
+  const dir = join(root, STARTER_NAME);
+  const project = { name: STARTER_NAME, path: dir };
+  if (io.exists(dir)) {
+    const check = checkProject(dir, io);
+    return check.ok
+      ? { ok: true, status: 'ok', detail: `${STARTER_NAME} 可用（${dir}）`, project, root }
+      : { ok: false, status: 'bad', detail: `${dir} 已经存在但不能用：${check.problems.join('；')}。换个位置（--projects-root）或用 --project 指定`, project, root };
+  }
+  if (opts.dryRun) return { ok: true, status: 'dry-run', detail: `会新建 ${dir}（空仓库，当第一个项目）`, project, root };
+  if (typeof io.gitInit !== 'function') return { ok: false, status: 'missing', detail: '没有项目。加 --project 名字=路径', project, root };
+  try {
+    io.mkdirp(dir);
+    io.gitInit(dir);
+  } catch (err) {
+    return { ok: false, status: 'bad', detail: `建 ${dir} 失败：${redact(err?.message ?? err)}`, project, root };
+  }
+  return { ok: true, status: 'created', detail: `新建了 ${dir}，当第一个项目（名字 ${STARTER_NAME}）`, project, root };
+}
+
 // ---------- the unattended run ----------
 
 /**
@@ -250,11 +280,10 @@ export async function runUnattended(opts, io) {
   const emit = (step, status, detail) => events.push({ step, status, ...(detail ? { detail } : {}) });
   const { readFile, writeFile, exists, mkdirp, homedir, env } = io;
 
-  if (!opts.project?.length) {
-    emit('project', 'missing', '没有项目。加 --project 名字=路径（可重复）；只是先看看就加 --dry-run。');
-    return { events, code: EXIT.missing, summary: { done: true, ok: false, code: EXIT.missing } };
-  }
-  for (const p of opts.project) {
+  // 058：没给项目不再退出——等 key 验过之后，在 ~/ai-projects/first 建一个空仓库当第一个项目。
+  // 普通用户手上没有 git 仓库，也不该为了装工作台先学 git。
+  const starter = !opts.project?.length;
+  for (const p of opts.project ?? []) {
     const check = checkProject(p.path, io);
     emit('project', check.ok ? 'ok' : 'bad', check.ok ? `${p.name} 可用` : `${p.name}：${check.problems.join('；')}`);
     if (!check.ok) return { events, code: EXIT.verify, summary: { done: true, ok: false, code: EXIT.verify } };
@@ -272,6 +301,13 @@ export async function runUnattended(opts, io) {
   const probe = await probeBackend({ baseUrl, model, key, fetchImpl: io.fetchImpl ?? fetch });
   emit('backend', probe.ok ? 'ok' : 'bad', `${spec.label} ${model}：${probe.message}`);
   if (!probe.ok) return { events, code: EXIT.verify, summary: { done: true, ok: false, code: EXIT.verify } };
+
+  if (starter) {
+    const r = ensureStarterProject(opts, io);
+    emit('project', r.status, r.detail);
+    if (!r.ok) return { events, code: EXIT.verify, summary: { done: true, ok: false, code: EXIT.verify } };
+    opts = { ...opts, project: [r.project], projectsRoot: opts.projectsRoot || r.root };
+  }
 
   // ---- files ----
   if (io.gitignorePath && exists(io.gitignorePath)) {

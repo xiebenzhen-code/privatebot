@@ -6,7 +6,7 @@
 - 想接第二个项目？看 `docs/NEW-PROJECT.md`。
 - 当决策端的模型：看 `docs/specs/DECISION-HANDOFF.md`。
 
-![今天](screenshots/overview.png)
+![今天](screenshots/light-workbench.jpg)
 
 页面有五项导航。**工作台**看等你拍板、在跑、排队和做完的任务，点任务从右侧打开详情。**剧组**看执行者、账号槽和额度。**自媒体**手动记内容及数据。**记录**看任务和用量。**设置**管理接入、安全、通知、外观和备份。额度入口在侧栏左下角。
 

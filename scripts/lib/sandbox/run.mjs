@@ -75,12 +75,83 @@ export function agentArgv(prompt) {
   return ['claude', '-p', prompt, '--output-format', 'stream-json', '--verbose', '--dangerously-skip-permissions'];
 }
 
+// ───────────── 046.7：磁盘上限、同时跑几个 ─────────────
+
+export const DISK_DEFAULT_MB = 4096;
+export const DISK_HARD_MB = 32768;
+/** 每个沙箱除了 agent 容器，还有代理、网关各 256 MB。 */
+const SIDECARS_MB = 512;
+/** 给 Docker 自己和 WSL 里别的东西留的。 */
+const RESERVE_MB = 2048;
+const BOX_CAP = 3;
+
+/** 配置里的 sandboxDiskMb：不写用 4 GB；写错了抛错；写太大截到 32 GB。 */
+export function diskLimitMb(cfg = {}) {
+  const v = cfg.sandboxDiskMb;
+  if (v === undefined || v === null) return DISK_DEFAULT_MB;
+  const n = Math.floor(Number(v));
+  if (!Number.isFinite(n) || n < 256) throw new Error('sandboxDiskMb 要是不小于 256 的数（单位 MB）');
+  return Math.min(n, DISK_HARD_MB);
+}
+
+/**
+ * 同时最多跑几个沙箱：min(执行器并行数, 3, 内存装得下几个)。
+ * 内存装得下几个 = (Docker 虚拟机总内存 − 2 GB 预留) ÷ (agent 内存 + 代理网关 512 MB)；
+ * 默认 2 GB 的 agent、8 GB 的 WSL 就是 floor(6144 ÷ 2560) = 2。读不出总内存就不按内存算。至少 1 个。
+ */
+export function sandboxCap({ maxParallel = 3, memTotalMb = null, agentMemMb = 2048 } = {}) {
+  let cap = Math.min(Math.max(1, Math.floor(Number(maxParallel) || 1)), BOX_CAP);
+  if (Number.isFinite(memTotalMb) && memTotalMb > 0) cap = Math.min(cap, Math.floor((memTotalMb - RESERVE_MB) / (agentMemMb + SIDECARS_MB)));
+  return Math.max(1, cap);
+}
+
+/** 沙箱名额：拿到才起容器，用完还回去。等的人按先来后到。 */
+export function createSlots() {
+  let used = 0;
+  const waiting = [];
+  const next = () => { while (waiting.length && used < waiting[0].cap()) { used++; waiting.shift().resolve(); } };
+  const release = () => { used = Math.max(0, used - 1); next(); };
+  return {
+    used: () => used,
+    waiting: () => waiting.length,
+    /** @param {number | (() => number)} cap @param {() => void} [onWait] 要排队时先叫一声 */
+    acquire(cap, onWait) {
+      const capOf = typeof cap === 'function' ? cap : () => cap;
+      let done = false;
+      const rel = () => { if (!done) { done = true; release(); } };
+      if (!waiting.length && used < capOf()) { used++; return Promise.resolve(rel); }
+      onWait?.();
+      return new Promise((resolve) => waiting.push({ cap: capOf, resolve: () => resolve(rel) }));
+    },
+  };
+}
+
+/**
+ * 每隔 everyMs 量一次 /work，超了就叫 onOver 一次并停止。返回停表函数。
+ * box 没有 diskUsedMb（假容器、别的供应商）就什么都不做。
+ */
+export function watchDisk(box, { limitMb, everyMs = 60_000, onOver, setTimer = setInterval, clearTimer = clearInterval }) {
+  if (typeof box?.diskUsedMb !== 'function') return () => {};
+  let busy = false;
+  let stopped = false;
+  const t = setTimer(async () => {
+    if (busy || stopped) return;
+    busy = true;
+    try {
+      const mb = await box.diskUsedMb();
+      if (!stopped && mb !== null && mb > limitMb) { stopped = true; clearTimer(t); await onOver(mb); }
+    } catch { /* 量不出来这次就算了，下次再量 */ } finally { busy = false; }
+  }, everyMs);
+  return () => { stopped = true; clearTimer(t); };
+}
+
 const SETUP = 'set -e; git clone -q --branch main /work/repo.bundle "$2"; cd "$2"; git checkout -q -b "$1"; git remote remove origin; git config user.name wb-sandbox; git config user.email sandbox@localhost; rm -f /work/repo.bundle';
 const HARVEST = 'set -e; cd "$2"; git add -A; git diff --cached --quiet || git commit -q -m "$1"; git diff --binary --full-index main..HEAD > /work/out.patch';
 
 /**
  * @param {{provider:any, task:{id:number,title?:string}, runId?:number, project:string, branch:string, plan:any, prompt:string,
- *          timeoutMs:number, onLine:(line:string)=>void, onBox?:(box:any)=>void, gitRun:(cwd:string,...a:string[])=>string, tmpRoot?:string}} o
+ *          timeoutMs:number, onLine:(line:string)=>void, onBox?:(box:any)=>void, gitRun:(cwd:string,...a:string[])=>string, tmpRoot?:string,
+ *          diskMb?:number, diskEveryMs?:number}} o
  * @returns {Promise<{code:number, killed:boolean, patch:string, problem:string}>}
  */
 export async function runInSandbox(o) {
@@ -98,7 +169,15 @@ export async function runInSandbox(o) {
     const setup = await box.exec(['sh', '-c', SETUP, 'sh', o.branch, SANDBOX_REPO], { cwd: '/work', onLine: (l) => setupLines.push(l), timeoutMs: 5 * 60_000 });
     if (setup.code !== 0) return { code: setup.code, killed: false, patch: '', problem: `沙箱里克隆代码失败：${safeLabel(setupLines.slice(-3).join(' '), 200)}` };
 
-    const run = await box.exec(agentArgv(o.prompt), { cwd: SANDBOX_REPO, onLine: o.onLine, timeoutMs: o.timeoutMs });
+    let full = 0;
+    const limitMb = o.diskMb ?? DISK_DEFAULT_MB;
+    const stopWatch = watchDisk(box, { limitMb, everyMs: o.diskEveryMs ?? 60_000, onOver: async (mb) => { full = mb; await box.kill?.(); } });
+    let run;
+    try {
+      run = await box.exec(agentArgv(o.prompt), { cwd: SANDBOX_REPO, onLine: o.onLine, timeoutMs: o.timeoutMs });
+    } finally { stopWatch(); }
+    // 写满了：改动不收（可能是半截），直接停。
+    if (full) return { code: run.code || 1, killed: true, patch: '', problem: `写满了：/work 用了 ${full} MB，上限 ${limitMb} MB，任务停了` };
 
     const msg = `T-${o.task.id} ${String(o.task.title ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').slice(0, 72)}`;
     const harvestLines = [];

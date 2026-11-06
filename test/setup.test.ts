@@ -251,13 +251,58 @@ describe('020 · 无人值守跑一遍', () => {
 
   const okFetch = (async () => new Response('{}', { status: 200 })) as unknown as typeof fetch;
 
-  test('缺 --project 直接退出码 1，不挂起等输入', async () => {
+  // 058：不给 --project 也能装完——在 ~/ai-projects/first 建一个空仓库当第一个项目。
+  const withGit = (root: string) => {
+    const inits: string[] = [];
+    const io = { ...fakeFs(root), fetchImpl: okFetch, env: { WB_SETUP_KEY_DEEPSEEK: 'sk-test-0123456789' }, gitInit: (d: string) => { inits.push(d); } };
+    return { io, inits };
+  };
+
+  test('058 · 没给项目：key 验过后建 ~/ai-projects/first，写进配置，退出码 0', async () => {
     const root = mkdtempSync(join(tmpdir(), 'wb-setup-'));
-    const io = { ...fakeFs(root), fetchImpl: okFetch };
+    const { io, inits } = withGit(root);
     const res = await core.runUnattended({ backend: 'deepseek' }, io);
+    assert.equal(res.code, 0, JSON.stringify(res.events));
+    const dir = join(root, 'ai-projects', 'first');
+    assert.deepEqual(inits, [dir]);
+    const ev = res.events.find((e: any) => e.step === 'project');
+    assert.equal(ev.status, 'created');
+    const cfg = JSON.parse(io.files.get(join(root, 'runner.json'))!);
+    assert.equal(cfg.projects.first, dir);
+    assert.equal(cfg.projectsRoot, join(root, 'ai-projects'), '网页上「新建项目」也一起能用了');
+  });
+
+  test('058 · 没给项目也没给 key：退出码 1，什么都不建', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'wb-setup-'));
+    const { io, inits } = withGit(root);
+    const res = await core.runUnattended({ backend: 'deepseek' }, { ...io, env: {} });
     assert.equal(res.code, 1);
-    assert.equal(res.events[0].step, 'project');
-    assert.equal(res.summary.ok, false);
+    assert.deepEqual(inits, []);
+  });
+
+  test('058 · first 已经是仓库就直接用；在但不是仓库就停下、不动它；--dry-run 只说会建', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'wb-setup-'));
+    const dir = join(root, 'ai-projects', 'first');
+    mkdirSync(join(dir, '.git'), { recursive: true });
+    let t = withGit(root);
+    let res = await core.runUnattended({ backend: 'deepseek' }, t.io);
+    assert.equal(res.code, 0);
+    assert.deepEqual(t.inits, [], '已有的仓库不重建');
+
+    const root2 = mkdtempSync(join(tmpdir(), 'wb-setup-'));
+    mkdirSync(join(root2, 'ai-projects', 'first'), { recursive: true });
+    t = withGit(root2);
+    res = await core.runUnattended({ backend: 'deepseek' }, t.io);
+    assert.equal(res.code, 3);
+    assert.match(res.events.find((e: any) => e.step === 'project').detail, /不是一个 git 仓库/);
+    assert.deepEqual(t.inits, []);
+
+    const root3 = mkdtempSync(join(tmpdir(), 'wb-setup-'));
+    t = withGit(root3);
+    res = await core.runUnattended({ backend: 'deepseek', dryRun: true }, t.io);
+    assert.equal(res.code, 0);
+    assert.equal(res.events.find((e: any) => e.step === 'project').status, 'dry-run');
+    assert.deepEqual(t.inits, []);
   });
 
   test('成功时写 .env 和 runner 配置，输出里没有完整密钥', async () => {
@@ -334,7 +379,7 @@ describe('020 · 无人值守跑一遍', () => {
 
   test('命令行里跑一次，退出码和 JSON 都对', () => {
     const root = mkdtempSync(join(tmpdir(), 'wb-setup-'));
-    // no --project: exit 1, never blocks
+    // no --project and no key: exit 1, never blocks, creates nothing (058: key is checked before the starter project)
     let code = 0;
     try {
       execFileSync(process.execPath, ['scripts/setup.mjs', '--yes', '--json'], { cwd: process.cwd(), timeout: 20000, encoding: 'utf8' });

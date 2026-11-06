@@ -45,6 +45,8 @@ function fixture(extra: Record<string, string> = {}, opts: { handoffTemplate?: s
     'docs/reports/2026-01-01.md': '余额还剩 1234.56 CNY，账号 zhangsan 的情况。\n',
     'docs/specs/README.md': '# 本项目的需求单\n\n| 001 | 私人项目 |\n',
     'docs/specs/001-private.md': '# 私人需求单\n\n余额 1234.56，机器名 DESKTOP-X。\n',
+    'private/packs/ecommerce.md': '# 电商行业包\n',
+    'media/intro/scene.js': 'export const scene = 1;\n',
     ...extra,
   };
   for (const [rel, text] of Object.entries(base)) {
@@ -104,6 +106,8 @@ describe('022 · 导出干净试用包', () => {
     assert.ok(!exists(join(out, 'data', 'x.db')), 'data/ 没进去');
     assert.ok(!exists(join(out, 'docs', 'reports')), 'reports 拿掉了');
     assert.ok(!exists(join(out, 'docs', 'specs', '001-private.md')), '本项目的需求单拿掉了');
+    assert.ok(!exists(join(out, 'private')), 'private/ 留在手里');
+    assert.ok(!exists(join(out, 'media')), 'media/ 留在手里');
 
     const specsReadme = readFileSync(join(out, 'docs', 'specs', 'README.md'), 'utf8');
     assert.match(specsReadme, /需求单（specs）/, '换成模板内容');

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // 022 · 导出干净试用包：`npm run export:trial` 或 `node scripts/export-trial.mjs --out <目录>`。
 //
-// 只导出 git 跟踪的文件；docs/reports/ 与本项目需求单（docs/specs/）拿掉，
+// 只导出 git 跟踪的文件；docs/reports/、private/（行业包、搭建方法）、media/（视频工程）与本项目需求单（docs/specs/）拿掉，
 // 用 docs/templates/new-project/ 的模板补上通用版本；导出前后各扫一遍敏感信息，
 // 命中就整体失败、什么都不留。--git 时在输出目录做唯一一条提交，作者默认是通用名字。
 // 不 push、不用令牌、不改源仓库。
@@ -80,6 +80,7 @@ const files = [];
 for (const rel of tracked) {
   const norm = rel.split(/[\\/]+/).join('/');
   if (norm === 'docs/PENDING.md' || norm.startsWith('docs/reports/')) { removed.push(norm); continue; }
+  if (norm.startsWith('private/') || norm.startsWith('media/')) { removed.push(norm); continue; } // 留在手里的：行业包、搭建方法和提示词、片头工程
   if (norm.startsWith('docs/specs/')) { removed.push(norm); continue; } // 用模板重新生成，不带走本项目需求单
   files.push(norm);
 }
@@ -189,7 +190,7 @@ const reportLines = [
   `导出报告`,
   `来源提交：${short}`,
   `导出日期：${new Date().toISOString().slice(0, 10)}`,
-  `导出文件：${files.length} 个；拿掉 ${removed.length} 个（docs/reports/ 与本项目需求单 docs/specs/，另生成通用的 docs/specs/README.md、DECISION-HANDOFF.md、VERSION）`,
+  `导出文件：${files.length} 个；拿掉 ${removed.length} 个（docs/reports/、private/、media/ 与本项目需求单 docs/specs/，另生成通用的 docs/specs/README.md、DECISION-HANDOFF.md、VERSION）`,
   `扫描规则：${RULES.length} 条通用规则 + ${blocklist.length} 个个人黑名单词 + ${allow.size} 条放行登记；命中 ${0} 处`,
   '',
   `— 请你确认的署名与字段 —`,

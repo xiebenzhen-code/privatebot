@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>PrivateBot 工作台 · 分层</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#4A5A12}a:hover{color:#1A1A17}
+button{font:inherit;color:inherit;cursor:pointer}
+input{font:inherit;color:inherit}
+@keyframes pbIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes pbSlide{from{transform:translateX(24px);opacity:0}to{transform:none;opacity:1}}
+.lv{animation:pbIn .3s cubic-bezier(.2,.8,.2,1)}
+.sl{animation:pbSlide .32s cubic-bezier(.2,.8,.2,1)}
+.row{transition:background-color .18s ease,transform .18s ease}
+.row:hover{background:#F0F0EA}
+.row:active{transform:scale(.995)}
+@keyframes pop{from{opacity:0;transform:translateY(6px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes fill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes dotIn{from{opacity:0;transform:scale(.3)}to{opacity:1;transform:none}}
+.pop{animation:pop .26s cubic-bezier(.2,.8,.2,1);transform-origin:bottom left}
+.fill{transform-origin:left;animation:fill .7s cubic-bezier(.2,.8,.2,1) both}
+.qd{animation:dotIn .3s cubic-bezier(.2,.8,.2,1) both}
+.qbtn{transition:background-color .18s ease}.qbtn:hover{background:#F0F0EA}
+@media (prefers-reduced-motion: reduce){.lv,.sl,.pop,.fill,.qd{animation:none}.row:active{transform:none}}
+</style>
+</helmet>
+<div style="width: 1280px; height: 800px; display: flex; background: #F7F7F4; color: #1A1A17; font-family: -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; font-size: 13px; line-height: 1.5; overflow: hidden; position: relative">
+
+<nav aria-label="主导航" style="width: 184px; flex: 0 0 auto; padding: 16px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px; border-right: 1px solid #E8E8E2">
+<div style="display: flex; align-items: center; gap: 10px; padding: 4px 8px 18px">
+<span style="width: 26px; height: 26px; border-radius: 8px; background: #1A1A17; color: #D7F25A; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px">P</span>
+<span style="font-weight: 700">PrivateBot</span>
+</div>
+<sc-for list="{{nav}}" as="n" hint-placeholder-count="4">
+<button type="button" onClick="{{n.go}}" style="height: 36px; display: flex; align-items: center; gap: 10px; padding: 0 10px; border: 0; border-radius: 9px; background: {{n.bg}}; font-weight: {{n.weight}}; text-align: left">
+<span style="width: 6px; height: 6px; border-radius: 3px; background: {{n.dot}}"></span>
+<span style="flex: 1">{{n.label}}</span>
+<span style="font-size: 12px; color: #6B6B63">{{n.count}}</span>
+</button>
+</sc-for>
+<span style="flex: 1"></span>
+<button type="button" class="qbtn" onClick="{{toggleQuota}}" aria-expanded="{{quotaOpen}}" aria-label="看额度" style="display: flex; align-items: center; gap: 8px; padding: 10px; border: 0; border-radius: 9px; background: transparent; text-align: left">
+<span style="display: flex; gap: 3px" aria-hidden="true"><sc-for list="{{qmini}}" as="q" hint-placeholder-count="4"><span style="width: 5px; height: 14px; border-radius: 3px; background: {{q.c}}"></span></sc-for></span>
+<span style="font-size: 12px; color: #6B6B63">额度</span>
+</button>
+</nav>
+<sc-if value="{{quotaOpen}}" hint-placeholder-val="{{ false }}">
+<div onClick="{{toggleQuota}}" aria-hidden="true" style="position: absolute; inset: 0"></div>
+<div class="pop" role="dialog" aria-label="额度" style="position: absolute; left: 14px; bottom: 58px; width: 236px; padding: 14px 14px 10px; box-sizing: border-box; background: #FFFFFF; border: 1px solid #E8E8E2; border-radius: 14px; box-shadow: 0 10px 30px rgba(26, 26, 23, 0.10); display: flex; flex-direction: column; gap: 10px">
+<sc-for list="{{quota}}" as="q" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<div style="display: flex; align-items: baseline; gap: 6px"><span style="font-size: 12px; flex: 1">{{q.name}}</span><span style="font-size: 12px; font-weight: 700; font-family: ui-monospace, Consolas, monospace">{{q.pct}}</span><span style="font-size: 11px; color: #8A8A80">{{q.reset}}</span></div>
+<div style="display: flex; gap: 3px" role="img" aria-label="{{q.label}}"><sc-for list="{{q.dots}}" as="d" hint-placeholder-count="10"><span class="qd" style="flex: 1; height: 5px; border-radius: 3px; background: {{d.c}}; animation-delay: {{d.delay}}"></span></sc-for></div>
+</div>
+</sc-for>
+<span style="font-size: 11px; color: #8A8A80">一格 = 10%，亮的是还剩的</span>
+</div>
+</sc-if>
+
+<main style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+<header style="padding: 18px 40px 0; display: flex; justify-content: center">
+<form style="width: 100%; max-width: 760px; height: 46px; display: flex; align-items: center; gap: 8px; padding: 0 6px 0 16px; box-sizing: border-box; border: 1px solid #E0E0D9; border-radius: 12px; background: #FFFFFF">
+<label for="v3-ask" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">让 AI 做什么</label>
+<input id="v3-ask" placeholder="让 AI 做什么？" style="flex: 1; min-width: 0; border: 0; outline: none; background: transparent; font-size: 14px">
+<span style="font-size: 12px; color: #6B6B63">ai-workbench ▾</span>
+<button type="button" style="height: 34px; padding: 0 16px; border: 0; border-radius: 9px; background: #D7F25A; font-weight: 700">派出去</button>
+</form>
+</header>
+
+<sc-if value="{{isHome}}" hint-placeholder-val="{{ true }}">
+<section class="lv" aria-label="工作台" style="flex: 1; padding: 44px 40px; display: flex; flex-direction: column; align-items: center; gap: 28px">
+<div style="width: 100%; max-width: 760px; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; color: #6B6B63">11 月 4 日 · 周三</span>
+<span style="font-size: 22px; font-weight: 700; letter-spacing: -0.01em">有 3 件事等你拍板，其余 6 件 AI 在自己干。</span>
+</div>
+<div style="width: 100%; max-width: 760px; display: flex; flex-direction: column; background: #FFFFFF; border: 1px solid #E8E8E2; border-radius: 14px; overflow: hidden">
+<sc-for list="{{groups}}" as="g" hint-placeholder-count="4">
+<button type="button" class="row" onClick="{{g.open}}" style="display: flex; align-items: center; gap: 14px; padding: 16px 18px; border: 0; border-top: {{g.border}}; background: transparent; text-align: left">
+<span style="min-width: 34px; height: 26px; padding: 0 9px; box-sizing: border-box; border-radius: 13px; background: {{g.chipBg}}; color: {{g.chipInk}}; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-family: ui-monospace, Consolas, monospace">{{g.n}}</span>
+<span style="display: flex; flex-direction: column; flex: 1; min-width: 0">
+<span style="font-weight: {{g.weight}}">{{g.label}}</span>
+<span style="font-size: 12px; color: #6B6B63; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{g.peek}}</span>
+</span>
+<span aria-hidden="true" style="color: #A3A39A">›</span>
+</button>
+</sc-for>
+</div>
+<span style="font-size: 12px; color: #8A8A80">额度、用量、谁最顺手 —— 在「剧组」和「记录」里，这一页不摆。</span>
+</section>
+</sc-if>
+
+<sc-if value="{{isList}}" hint-placeholder-val="{{ false }}">
+<section class="lv" aria-label="{{grp.label}}" style="flex: 1; padding: 32px 40px; display: flex; flex-direction: column; align-items: center; gap: 16px">
+<div style="width: 100%; max-width: 760px; display: flex; align-items: center; gap: 8px">
+<button type="button" onClick="{{goHome}}" style="border: 0; background: transparent; padding: 0; color: #6B6B63">工作台</button>
+<span style="color: #A3A39A">›</span>
+<span style="font-weight: 700">{{grp.label}}</span>
+<span style="color: #6B6B63">{{grp.n}}</span>
+</div>
+<div style="width: 100%; max-width: 760px; display: flex; flex-direction: column; gap: 8px">
+<sc-for list="{{rows}}" as="t" hint-placeholder-count="3">
+<button type="button" class="row" onClick="{{t.open}}" style="display: flex; align-items: center; gap: 14px; padding: 14px 16px; border: 1px solid {{t.line}}; border-radius: 12px; background: {{t.bg}}; text-align: left">
+<span style="width: 28px; height: 28px; border-radius: 14px; background: #1A1A17; color: #F7F7F4; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex: 0 0 auto">{{t.mark}}</span>
+<span style="display: flex; flex-direction: column; flex: 1; min-width: 0">
+<span style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{t.title}}</span>
+<span style="font-size: 12px; color: {{t.subInk}}">{{t.sub}}</span>
+</span>
+<span style="font-size: 12px; color: #6B6B63; white-space: nowrap">{{t.when}}</span>
+</button>
+</sc-for>
+</div>
+</section>
+</sc-if>
+
+<sc-if value="{{isCrew}}" hint-placeholder-val="{{ false }}">
+<section class="lv" aria-label="剧组" style="flex: 1; padding: 44px 40px; display: flex; flex-direction: column; align-items: center; gap: 22px; overflow: auto">
+<div style="width: 100%; max-width: 760px; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 22px; font-weight: 700">谁在帮你干活</span>
+<span style="font-size: 12px; color: #6B6B63">点一个看它手上的活和账号。</span>
+</div>
+<div style="width: 100%; max-width: 760px; display: flex; flex-direction: column; background: #FFFFFF; border: 1px solid #E8E8E2; border-radius: 14px; overflow: hidden">
+<sc-for list="{{crew}}" as="e" hint-placeholder-count="4">
+<div style="border-top: {{e.border}}">
+<button type="button" class="row" onClick="{{e.toggle}}" aria-expanded="{{e.open}}" style="width: 100%; display: flex; align-items: center; gap: 14px; padding: 15px 18px; border: 0; background: transparent; text-align: left">
+<span style="width: 28px; height: 28px; border-radius: 14px; background: #1A1A17; color: #F7F7F4; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700">{{e.mark}}</span>
+<span style="display: flex; flex-direction: column; flex: 1; min-width: 0">
+<span style="font-weight: 600">{{e.name}}</span>
+<span style="font-size: 12px; color: #6B6B63">{{e.line}}</span>
+</span>
+<span style="width: 8px; height: 8px; border-radius: 4px; background: {{e.dot}}" title="{{e.state}}"></span>
+<span aria-hidden="true" style="color: #A3A39A">{{e.arrow}}</span>
+</button>
+<sc-if value="{{e.open}}" hint-placeholder-val="{{ false }}">
+<div class="lv" style="padding: 0 18px 16px 60px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 11px; color: #8A8A80">账号槽</span>
+<sc-for list="{{e.slots}}" as="sl" hint-placeholder-count="2">
+<div style="display: flex; align-items: center; gap: 10px"><span style="font-size: 12px; width: 90px">{{sl.name}}</span><span style="flex: 1; height: 4px; border-radius: 2px; background: #EFEFEA; overflow: hidden"><span class="fill" style="display: block; height: 4px; width: {{sl.w}}; background: {{sl.c}}"></span></span><span style="font-size: 11px; color: #8A8A80; width: 54px; text-align: right">{{sl.left}}</span></div>
+</sc-for>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 11px; color: #8A8A80">擅长</span>
+<div style="display: flex; gap: 14px; flex-wrap: wrap"><sc-for list="{{e.skills}}" as="k" hint-placeholder-count="3"><span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px"><span style="display: flex; gap: 2px"><sc-for list="{{k.dots}}" as="d" hint-placeholder-count="5"><span style="width: 5px; height: 5px; border-radius: 3px; background: {{d}}"></span></sc-for></span>{{k.label}}</span></sc-for></div>
+</div>
+<sc-if value="{{e.hasWork}}" hint-placeholder-val="{{ true }}"><span style="font-size: 12px; color: #3F3F3A">手上：{{e.work}}</span></sc-if>
+</div>
+</sc-if>
+</div>
+</sc-for>
+</div>
+</section>
+</sc-if>
+<sc-if value="{{isLog}}" hint-placeholder-val="{{ false }}">
+<section class="lv" aria-label="记录" style="flex: 1; padding: 36px 40px; display: flex; flex-direction: column; align-items: center; gap: 18px; overflow: auto">
+<div style="width: 100%; max-width: 820px; display: flex; align-items: flex-end; gap: 16px">
+<div style="flex: 1; display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 12px; color: #6B6B63">AI 替你干的活</span>
+<span style="font-size: 22px; font-weight: 700">{{per.title}}</span>
+</div>
+<div style="display: flex; padding: 3px; border-radius: 10px; background: #EFEFEA">
+<sc-for list="{{periods}}" as="pd" hint-placeholder-count="3"><button type="button" onClick="{{pd.pick}}" aria-pressed="{{pd.on}}" style="height: 28px; padding: 0 12px; border: 0; border-radius: 8px; background: {{pd.bg}}; font-size: 12px; font-weight: {{pd.w}}; box-shadow: {{pd.sh}}">{{pd.label}}</button></sc-for>
+</div>
+</div>
+
+<div style="width: 100%; max-width: 820px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">
+<sc-for list="{{per.stats}}" as="k" hint-placeholder-count="3">
+<div style="padding: 12px 14px; border-radius: 12px; background: #FFFFFF; border: 1px solid #E8E8E2; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; color: #6B6B63">{{k.label}}</span>
+<div style="display: flex; align-items: baseline; gap: 6px"><span style="font-size: 20px; font-weight: 700; font-family: ui-monospace, Consolas, monospace">{{k.v}}</span><span style="font-size: 12px; color: #8A8A80">{{k.sub}}</span></div>
+<div style="display: flex; height: 6px; border-radius: 3px; overflow: hidden; gap: 2px" role="img" aria-label="{{k.aria}}"><sc-for list="{{k.seg}}" as="g" hint-placeholder-count="4"><span class="fill" style="flex: {{g.f}}; background: {{g.c}}"></span></sc-for></div>
+<div style="display: flex; gap: 10px; flex-wrap: wrap"><sc-for list="{{k.seg}}" as="g" hint-placeholder-count="4"><span style="font-size: 11px; color: #6B6B63; display: inline-flex; align-items: center; gap: 4px"><span style="width: 6px; height: 6px; border-radius: 3px; background: {{g.c}}"></span>{{g.name}}</span></sc-for></div>
+</div>
+</sc-for>
+</div>
+
+<div style="width: 100%; max-width: 820px; display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 12px; color: #6B6B63; padding: 0 2px">按天看 · 点开是那天做完的活</span>
+<div style="display: flex; flex-direction: column; background: #FFFFFF; border: 1px solid #E8E8E2; border-radius: 14px; overflow: hidden">
+<sc-for list="{{days}}" as="d" hint-placeholder-count="4">
+<div style="border-top: {{d.border}}">
+<button type="button" class="row" onClick="{{d.toggle}}" aria-expanded="{{d.open}}" style="width: 100%; display: flex; align-items: center; gap: 14px; padding: 13px 18px; border: 0; background: transparent; text-align: left">
+<span style="width: 74px; font-weight: 600">{{d.day}}</span>
+<span style="display: flex; gap: 3px; flex: 1" role="img" aria-label="{{d.aria}}"><sc-for list="{{d.marks}}" as="m" hint-placeholder-count="6"><span style="width: 10px; height: 10px; border-radius: 3px; background: {{m}}"></span></sc-for></span>
+<span style="font-size: 12px; color: #6B6B63; width: 110px; text-align: right">{{d.sum}}</span>
+<span style="font-size: 12px; color: #8A8A80; width: 60px; text-align: right; font-family: ui-monospace, Consolas, monospace">{{d.tok}}</span>
+<span aria-hidden="true" style="color: #A3A39A; width: 10px">{{d.arrow}}</span>
+</button>
+<sc-if value="{{d.open}}" hint-placeholder-val="{{ false }}">
+<div class="lv" style="padding: 0 18px 10px 106px; display: flex; flex-direction: column">
+<sc-for list="{{d.tasks}}" as="t" hint-placeholder-count="3">
+<button type="button" class="row" onClick="{{t.open}}" style="display: flex; align-items: center; gap: 10px; padding: 8px 8px; margin: 0 -8px; border: 0; border-radius: 8px; background: transparent; text-align: left">
+<span style="width: 10px; height: 10px; border-radius: 3px; background: {{t.c}}; flex: 0 0 auto"></span>
+<span style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{t.title}}</span>
+<span style="font-size: 12px; color: {{t.outInk}}">{{t.out}}</span>
+<span style="width: 20px; height: 20px; border-radius: 10px; background: #1A1A17; color: #F7F7F4; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700">{{t.mark}}</span>
+<span style="font-size: 11px; color: #8A8A80; width: 46px; text-align: right; font-family: ui-monospace, Consolas, monospace">{{t.tok}}</span>
+</button>
+</sc-for>
+</div>
+</sc-if>
+</div>
+</sc-for>
+</div>
+<span style="font-size: 11px; color: #8A8A80; padding: 0 2px">每个小方块是一件活：越亮越省心（一次就过），越淡越费你的事（让它改过、你自己来、没成）。</span>
+</div>
+</section>
+</sc-if>
+
+<sc-if value="{{isSet}}" hint-placeholder-val="{{ false }}">
+<section class="lv" aria-label="设置" style="flex: 1; padding: 44px 40px; display: flex; flex-direction: column; align-items: center; gap: 22px; overflow: auto">
+<div style="width: 100%; max-width: 760px; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 22px; font-weight: 700">设置</span>
+<span style="font-size: 12px; color: #6B6B63">有一件要你看：2 个接入还没接上。</span>
+</div>
+<div style="width: 100%; max-width: 760px; display: flex; flex-direction: column; background: #FFFFFF; border: 1px solid #E8E8E2; border-radius: 14px; overflow: hidden">
+<sc-for list="{{sets}}" as="g" hint-placeholder-count="5">
+<div style="border-top: {{g.border}}">
+<button type="button" class="row" onClick="{{g.toggle}}" aria-expanded="{{g.open}}" style="width: 100%; display: flex; align-items: center; gap: 14px; padding: 15px 18px; border: 0; background: transparent; text-align: left">
+<span style="width: 8px; height: 8px; border-radius: 4px; background: {{g.dot}}"></span>
+<span style="font-weight: 600; width: 120px">{{g.label}}</span>
+<span style="flex: 1; font-size: 12px; color: {{g.subInk}}">{{g.sub}}</span>
+<span aria-hidden="true" style="color: #A3A39A">{{g.arrow}}</span>
+</button>
+<sc-if value="{{g.open}}" hint-placeholder-val="{{ false }}">
+<div class="lv" style="padding: 0 18px 14px 40px; display: flex; flex-direction: column">
+<sc-for list="{{g.items}}" as="it" hint-placeholder-count="3">
+<div style="display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid #F4F4EF">
+<span style="flex: 1; display: flex; flex-direction: column"><span style="font-size: 13px">{{it.name}}</span><span style="font-size: 11px; color: #8A8A80">{{it.note}}</span></span>
+<button type="button" onClick="{{it.flip}}" role="switch" aria-checked="{{it.on}}" aria-label="{{it.name}}" style="width: 32px; height: 18px; border: 0; border-radius: 9px; padding: 2px; background: {{it.track}}; display: flex; justify-content: {{it.side}}; transition: background-color .2s ease"><span style="width: 14px; height: 14px; border-radius: 7px; background: #FFFFFF"></span></button>
+</div>
+</sc-for>
+</div>
+</sc-if>
+</div>
+</sc-for>
+</div>
+</section>
+</sc-if>
+</main>
+
+<sc-if value="{{hasTask}}" hint-placeholder-val="{{ false }}">
+<div onClick="{{closeTask}}" aria-hidden="true" style="position: absolute; inset: 0; background: rgba(26, 26, 23, 0.12)"></div>
+<aside class="sl" aria-label="任务详情" style="position: absolute; top: 0; right: 0; bottom: 0; width: 460px; background: #FFFFFF; border-left: 1px solid #E8E8E2; display: flex; flex-direction: column; overflow: auto">
+<div style="padding: 18px 22px 14px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #F0F0EA">
+<span style="height: 22px; padding: 0 9px; border-radius: 11px; background: {{sel.chipBg}}; color: {{sel.chipInk}}; display: inline-flex; align-items: center; font-size: 12px; font-weight: 700">{{sel.state}}</span>
+<span style="font-size: 12px; color: #6B6B63">{{sel.who}} · ai-workbench</span>
+<span style="flex: 1"></span>
+<button type="button" onClick="{{closeTask}}" aria-label="关闭详情" style="width: 30px; height: 30px; border: 0; border-radius: 8px; background: #F3F3EE">×</button>
+</div>
+<div style="padding: 18px 22px; display: flex; flex-direction: column; gap: 18px">
+<span style="font-size: 17px; font-weight: 700; line-height: 1.4">{{sel.title}}</span>
+<span style="font-size: 13px; color: #3F3F3A">{{sel.now}}</span>
+<sc-if value="{{sel.ask}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; align-items: center; gap: 6px">
+<button type="button" style="height: 30px; padding: 0 14px; border: 0; border-radius: 8px; background: #1A1A17; color: #F7F7F4; font-weight: 600">批准</button>
+<button type="button" onClick="{{toggleAsk}}" aria-expanded="{{askOpen}}" style="height: 30px; padding: 0 12px; border: 1px solid #E0E0D9; border-radius: 8px; background: #FFFFFF">不行，让它改…</button>
+<span style="flex: 1"></span>
+<button type="button" style="height: 30px; padding: 0 8px; border: 0; background: transparent; color: #6B6B63; font-size: 12px">我自己来</button>
+</div>
+<sc-if value="{{askOpen}}" hint-placeholder-val="{{ false }}">
+<div class="lv" style="display: flex; flex-direction: column; gap: 6px">
+<label for="v3-fb" style="font-size: 12px; color: #6B6B63">告诉它哪里不对。这句话会原样发给它，它按你说的改完再来问你。</label>
+<div style="display: flex; gap: 6px"><input id="v3-fb" placeholder="例：先补一条去重的测试再推送" style="flex: 1; min-width: 0; height: 32px; padding: 0 10px; border: 1px solid #E0E0D9; border-radius: 8px; outline: none"><button type="button" style="height: 32px; padding: 0 12px; border: 0; border-radius: 8px; background: #EEF5C9; color: #3D4A0E; font-weight: 600">发给它</button></div>
+</div>
+</sc-if>
+</sc-if>
+<div style="display: flex; flex-direction: column; border-top: 1px solid #F0F0EA">
+<sc-for list="{{sections}}" as="s" hint-placeholder-count="3">
+<div style="border-bottom: 1px solid #F0F0EA">
+<button type="button" onClick="{{s.toggle}}" aria-expanded="{{s.open}}" style="width: 100%; display: flex; align-items: center; gap: 8px; padding: 13px 0; border: 0; background: transparent; text-align: left">
+<span style="flex: 1; font-weight: 600">{{s.label}}</span>
+<span style="font-size: 12px; color: #6B6B63">{{s.hint}}</span>
+<span aria-hidden="true" style="color: #A3A39A">{{s.arrow}}</span>
+</button>
+<sc-if value="{{s.open}}" hint-placeholder-val="{{ false }}">
+<div class="lv" style="padding: 0 0 14px; display: flex; flex-direction: column; gap: 8px">
+<sc-for list="{{s.lines}}" as="l" hint-placeholder-count="3">
+<div style="display: flex; gap: 10px; align-items: baseline">
+<span style="width: 8px; height: 8px; border-radius: 4px; background: {{l.dot}}; flex: 0 0 auto; transform: translateY(1px)"></span>
+<span style="flex: 1; color: #3F3F3A">{{l.text}}</span>
+<span style="font-size: 12px; color: #8A8A80">{{l.when}}</span>
+</div>
+</sc-for>
+</div>
+</sc-if>
+</div>
+</sc-for>
+</div>
+</div>
+</aside>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { view: 'home', group: null, task: null, open: {}, quota: false, ask: false, crewOpen: 'claude', logOpen: 'use', setOpen: 'link', flips: {} }; }
+  renderVals() {
+    // 一个色相（黄绿），只用饱和度分轻重：越要你管，越饱和。
+    const HUE = { hot: { bg: '#D7F25A', ink: '#1A1A17' }, mid: { bg: '#EEF5C9', ink: '#3D4A0E' }, low: { bg: '#EFEFEA', ink: '#55554D' } };
+    const data = {
+      you: { label: '等你拍板', tone: 'hot', peek: '推送 feat/rss-dedupe 到 main · 删 legacy/ 旧脚本 · …', rows: [
+        { id: 1, title: '把 feat/rss-dedupe 推送到 main', mark: 'C', who: 'Claude', sub: '要推送 · 测试已过', when: '22 分钟', now: '改完了，测试 42 条全过。要推送到 main，等你点头。', ask: true },
+        { id: 2, title: '清理 legacy/ 旧脚本', mark: 'X', who: 'Codex', sub: '要删 6 个文件', when: '10 分钟', now: '要执行 rm -rf legacy/，删 6 个文件。', ask: true },
+        { id: 3, title: '修复 demo-server 上的部署脚本', mark: 'C', who: 'Claude', sub: '没成：测试红了 2 条', when: '1 小时', now: '跑测试时 2 条没过，停下了。你可以让它再试，或者自己接手。', ask: false } ] },
+      run: { label: '在跑', tone: 'mid', peek: '整理 README · 给 RSS 抓取加去重 · 批量写 20 条文案', rows: [
+        { id: 4, title: '整理 README 与部署文档', mark: 'C', who: 'Claude', sub: '写草稿 · 第 2 步，共 5 步', when: '刚刚', now: '正在写部署那一节。' },
+        { id: 5, title: '给 RSS 抓取加去重与重试', mark: 'C', who: 'Claude', sub: '写测试 · 第 5 步，共 7 步', when: '3 分钟', now: '在补重试的测试。' } ] },
+      queue: { label: '排队', tone: 'low', peek: '20 条短视频选题初筛 · 容器日志轮转', rows: [
+        { id: 6, title: '20 条短视频选题初筛', mark: '池', who: '反代池', sub: '等空出一个位置', when: '5 分钟', now: '排在第 1 个。' } ] },
+      done: { label: '今天完成', tone: 'low', peek: '9 件，其中 1 件你接手', rows: [
+        { id: 7, title: '历史审批 #9', mark: 'C', who: 'Claude', sub: '完成 · 有结果', when: '9:40', now: '已合并、已推送。' } ] },
+    };
+    const counts = { you: 3, run: 4, queue: 2, done: 9 };
+    const st = this.state;
+    const set = (s) => this.setState(s);
+    const order = ['you', 'run', 'queue', 'done'];
+    const groups = order.map((k, i) => ({
+      n: counts[k], label: data[k].label, peek: data[k].peek,
+      chipBg: HUE[data[k].tone].bg, chipInk: HUE[data[k].tone].ink,
+      weight: data[k].tone === 'hot' ? 700 : 500,
+      border: i ? '1px solid #F0F0EA' : '0',
+      open: () => set({ view: 'list', group: k, task: null }),
+    }));
+    const grpKey = st.group || 'you';
+    const grp = { label: data[grpKey].label, n: counts[grpKey] };
+    const toneOf = (t) => (grpKey === 'you' ? (t.ask ? 'hot' : 'hot') : data[grpKey].tone);
+    const rows = data[grpKey].rows.map((t) => {
+      const tone = toneOf(t);
+      return { ...t,
+        bg: tone === 'hot' ? '#FBFDEB' : '#FFFFFF',
+        line: tone === 'hot' ? '#D7F25A' : '#E8E8E2',
+        subInk: tone === 'hot' ? '#3D4A0E' : '#6B6B63',
+        open: () => set({ task: t.id, open: {} }) };
+    });
+    const all = order.flatMap((k) => data[k].rows.map((t) => ({ ...t, g: k })));
+    const cur = all.find((t) => t.id === st.task);
+    const selTone = cur ? (cur.g === 'you' ? 'hot' : data[cur.g].tone) : 'low';
+    const sel = cur ? { ...cur, state: cur.g === 'you' ? (cur.ask ? '等你拍板' : '没成') : data[cur.g].label,
+      chipBg: HUE[selTone].bg, chipInk: HUE[selTone].ink } : {};
+    const SEC = [
+      { key: 'steps', label: '过程', hint: '4 步', lines: [
+        { text: '领到任务，读了 6 个文件', when: '10:02', dot: '#1A1A17' },
+        { text: '改了 3 个文件，测试 42 条全过', when: '10:14', dot: '#1A1A17' },
+        { text: '等你批准推送', when: '10:20', dot: '#D7F25A' } ] },
+      { key: 'result', label: '结果', hint: '一段话', lines: [ { text: '去重按 guid + 链接；失败重试 3 次，间隔翻倍。', when: '', dot: '#C9C9C0' } ] },
+      { key: 'audit', label: '审计', hint: '3 条', lines: [
+        { text: '你：批准合并', when: '10:16', dot: '#C9C9C0' },
+        { text: '系统：创建分支 wb/T-12', when: '10:02', dot: '#C9C9C0' } ] },
+    ];
+    const sections = SEC.map((s) => ({ ...s, open: !!st.open[s.key], arrow: st.open[s.key] ? '−' : '+',
+      toggle: () => set({ open: { ...st.open, [s.key]: !st.open[s.key] } }) }));
+    const navDefs = [['home', '工作台', '3'], ['crew', '剧组', ''], ['log', '记录', ''], ['set', '设置', '']];
+    const viewOf = (k) => (k === 'home' ? 'home' : k);
+    const curNav = st.view === 'list' ? 'home' : st.view;
+    const nav = navDefs.map(([k, label, count]) => {
+      const on = k === curNav;
+      return { label, count, bg: on ? '#EFEFEA' : 'transparent', weight: on ? 700 : 500, dot: count ? '#D7F25A' : 'transparent', go: () => set({ view: viewOf(k), group: null, task: null }) };
+    });
+    // 额度：一格 10%，亮（饱和）= 还剩的，越少越淡——只用一个色相
+    const Q = [ ['Claude · 主号', 0.12, '2 小时后重置'], ['Claude · 备用', 0.65, '周五重置'], ['Codex', 0.42, '明天重置'], ['反代池', 0.9, '按量'] ];
+    const shade = (left) => (left < 0.2 ? '#B8C78A' : left < 0.5 ? '#C6E04A' : '#D7F25A');
+    const quota = Q.map(([name, left, reset]) => ({ name, reset, pct: Math.round(left * 100) + '%', label: name + ' 还剩 ' + Math.round(left * 100) + '%',
+      dots: Array.from({ length: 10 }, (_, i) => ({ c: i < Math.round(left * 10) ? shade(left) : '#ECECE6', delay: (i * 0.03) + 's' })) }));
+    const qmini = Q.map(([, left]) => ({ c: left < 0.2 ? '#C9C9C0' : shade(left) }));
+    const CREW = [
+      { k: 'claude', name: 'Claude', mark: 'C', line: '在跑 2 · 排队 1', state: '在线', dot: '#D7F25A', work: '整理 README、给 RSS 加去重',
+        slots: [['主号', 0.12], ['备用', 0.65]], skills: [['改代码', 5], ['联网', 3], ['写文档', 4]] },
+      { k: 'codex', name: 'Codex', mark: 'X', line: '在跑 1 · 等你 1', state: '在线', dot: '#D7F25A', work: '清理 legacy/ 旧脚本',
+        slots: [['默认', 0.42]], skills: [['改代码', 4], ['联网', 2]] },
+      { k: 'pool', name: '反代池', mark: '池', line: '排队 1', state: '在线', dot: '#EEF5C9', work: '20 条短视频选题初筛',
+        slots: [['按量', 0.9]], skills: [['写文案', 4], ['只读', 5]] },
+      { k: 'zcode', name: 'ZCode', mark: 'Z', line: '只能在它自己的应用里用', state: '你手动用', dot: '#D9D9D2', work: '',
+        slots: [], skills: [['改代码', 3]] },
+    ];
+    const lime = (r) => (r > 0.66 ? '#D7F25A' : r > 0.33 ? '#E4F08F' : '#EEF5C9');
+    // 一件活的结局 = 它费了你多少事。饱和度越高越省心。
+    const OUT = { once: { c: '#D7F25A', t: '一次就过', ink: '#3D4A0E' }, fix: { c: '#E4F08F', t: '让它改过 1 次', ink: '#55554D' }, me: { c: '#D9D9D2', t: '你自己来', ink: '#55554D' }, fail: { c: '#B5B5AC', t: '没成', ink: '#1A1A17' } };
+    const P = {
+      week: { title: '这周做完 31 件，大多一次就过', stats: [
+        { label: '做完', v: '31', sub: '件', seg: [['一次就过', 21, 'once'], ['让它改过', 5, 'fix'], ['你自己来', 2, 'me'], ['没成', 3, 'fail']] },
+        { label: '谁干的', v: '4', sub: '位', seg: [['Claude', 16, 'once'], ['Codex', 8, 'fix'], ['反代池', 5, 'me'], ['你', 2, 'fail']] },
+        { label: '花了', v: '9.4M', sub: 'token', seg: [['Claude 主号', 5.1, 'once'], ['Claude 备用', 2.2, 'fix'], ['Codex', 1.5, 'me'], ['反代池', 0.6, 'fail']] } ] },
+      month: { title: '这个月做完 118 件', stats: [
+        { label: '做完', v: '118', sub: '件', seg: [['一次就过', 80, 'once'], ['让它改过', 19, 'fix'], ['你自己来', 8, 'me'], ['没成', 11, 'fail']] },
+        { label: '谁干的', v: '5', sub: '位', seg: [['Claude', 60, 'once'], ['Codex', 30, 'fix'], ['反代池', 20, 'me'], ['你', 8, 'fail']] },
+        { label: '花了', v: '36M', sub: 'token', seg: [['Claude 主号', 19, 'once'], ['Claude 备用', 9, 'fix'], ['Codex', 6, 'me'], ['反代池', 2, 'fail']] } ] },
+    };
+    const pk = st.period || 'week';
+    const periods = [['week', '这周'], ['month', '这个月']].map(([k, label]) => { const on = pk === k; return { label, on, bg: on ? '#FFFFFF' : 'transparent', w: on ? 700 : 500, sh: on ? '0 1px 2px rgba(26,26,23,.08)' : 'none', pick: () => set({ period: k }) }; });
+    const per = { title: P[pk].title, stats: P[pk].stats.map((k) => ({ ...k, aria: k.label + '：' + k.seg.map(([n, v]) => n + ' ' + v).join('，'), seg: k.seg.map(([name, f, o]) => ({ name, f, c: OUT[o].c })) })) };
+    const D = [
+      ['今天', '1.8M', [['历史审批 #9', 'once', 'C', '220k'], ['整理 README', 'once', 'C', '310k'], ['清理日志', 'fix', 'X', '90k'], ['修部署脚本', 'fail', 'C', '410k'], ['选题初筛', 'once', '池', '60k'], ['补测试', 'me', '我', '—']]],
+      ['昨天', '2.1M', [['RSS 去重', 'once', 'C', '520k'], ['改登录页', 'fix', 'X', '300k'], ['写周报', 'once', '池', '40k']]],
+      ['周一', '1.2M', [['升级依赖', 'once', 'X', '180k'], ['修错别字', 'once', 'C', '20k']]],
+      ['上周日', '0.4M', [['备份检查', 'once', 'C', '30k']]],
+    ];
+    const allOut = (ts) => ts.map(([, o]) => OUT[o].c);
+    const days = D.map(([day, tok, ts], i) => { const open = (st.dayOpen ?? '今天') === day; return {
+      day, tok, open, border: i ? '1px solid #F0F0EA' : '0', arrow: open ? '−' : '+',
+      marks: allOut(ts), sum: ts.length + ' 件' + (ts.some(([, o]) => o === 'fail') ? ' · 1 件没成' : ''),
+      aria: day + ' 做完 ' + ts.length + ' 件', toggle: () => set({ dayOpen: open ? 'none' : day }),
+      tasks: ts.map(([title, o, mark, t]) => ({ title, mark, tok: t, c: OUT[o].c, out: OUT[o].t, outInk: OUT[o].ink, open: () => set({ task: 7 }) })) }; });
+    const fl = st.flips;
+    const sw = (id, name, note, def) => { const on = fl[id] ?? def; return { name, note, on, track: on ? '#1A1A17' : '#E0E0D9', side: on ? 'flex-end' : 'flex-start', flip: () => set({ flips: { ...fl, [id]: !on } }) }; };
+    const SET = [
+      { k: 'link', label: '接入', sub: '6 个接上，2 个没接', hot: true, items: [sw('gh', 'GitHub', '已接上 · 能开 Issue 任务', true), sw('ds', 'DeepSeek 余额', '没接：.env 里少一个 key', false), sw('glm', 'GLM 余额', '没接', false)] },
+      { k: 'safe', label: '安全', sub: '规则 12 条 · 自动执行开着', items: [sw('auto', '自动执行', '关掉后执行器不领新任务', true), sw('docs', '只改文档的合并自动通过', '其余一律等你点头', true)] },
+      { k: 'note', label: '通知', sub: '企微 1 个渠道', items: [sw('done', '完成也推送', '默认只推审批和失败', false)] },
+      { k: 'look', label: '外观', sub: '跟随系统', items: [sw('dark', '深色', '手动切过之后不再跟随系统', false)] },
+      { k: 'bak', label: '备份', sub: '昨天 03:30 成功', items: [sw('daily', '每天自动备份', '保留 30 份', true)] },
+    ];
+    const sets = SET.map((g, i) => { const open = st.setOpen === g.k; return { ...g, open, border: i ? '1px solid #F0F0EA' : '0', arrow: open ? '−' : '+',
+      dot: g.hot ? '#D7F25A' : '#E0E0D9', subInk: g.hot ? '#3D4A0E' : '#6B6B63', toggle: () => set({ setOpen: open ? null : g.k }) }; });
+    const crew = CREW.map((e, i) => {
+      const open = st.crewOpen === e.k;
+      return { ...e, open, border: i ? '1px solid #F0F0EA' : '0', arrow: open ? '−' : '+', hasWork: !!e.work,
+        toggle: () => set({ crewOpen: open ? null : e.k }),
+        slots: e.slots.map(([name, left]) => ({ name, left: '剩 ' + Math.round(left * 100) + '%', w: Math.round(left * 100) + '%', c: shade(left) })),
+        skills: e.skills.map(([label, n]) => ({ label, dots: Array.from({ length: 5 }, (_, j) => (j < n ? '#1A1A17' : '#E0E0D9')) })) };
+    });
+    return {
+      nav, groups, grp, rows, sections, sel, quota, qmini, crew,
+      periods, per, days, sets, isLog: st.view === 'log', isSet: st.view === 'set',
+      quotaOpen: st.quota, toggleQuota: () => set({ quota: !st.quota }),
+      askOpen: st.ask, toggleAsk: () => set({ ask: !st.ask }), isCrew: st.view === 'crew',
+      isHome: st.view === 'home', isList: st.view === 'list', hasTask: !!cur,
+      goHome: () => set({ view: 'home', group: null, task: null }),
+      closeTask: () => set({ task: null, ask: false }),
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,550 @@
+{
+  "allow": [
+    {
+      "file": "src/services/redact.ts",
+      "rule": "email",
+      "hash": "e4d60e477ac50ae4",
+      "line": 37,
+      "why": "脱敏规则注释中的虚构网址凭据示例"
+    },
+    {
+      "file": "src/services/redact.ts",
+      "rule": "personal-path",
+      "hash": "e5ce8671df3ee9d7",
+      "line": 44,
+      "why": "脱敏规则注释中的虚构路径示例"
+    },
+    {
+      "file": "src/services/redact.ts",
+      "rule": "personal-path",
+      "hash": "c82c8ecf13db7d29",
+      "line": 48,
+      "why": "脱敏规则注释中的虚构路径示例"
+    },
+    {
+      "file": "src/services/redact.ts",
+      "rule": "personal-path",
+      "hash": "ae51e4d72d9d6832",
+      "line": 51,
+      "why": "脱敏规则注释中的虚构路径示例"
+    },
+    {
+      "file": "README.md",
+      "rule": "email",
+      "hash": "03b8bd16e14fb401",
+      "line": 469,
+      "why": "许可证里故意公开的商用联系邮箱"
+    },
+    {
+      "file": "README.md",
+      "rule": "email",
+      "hash": "ffc39301e4c43f10",
+      "line": 477,
+      "why": "许可证里故意公开的商用联系邮箱"
+    },
+    {
+      "file": "docs/FAQ.md",
+      "rule": "email",
+      "hash": "9812d3377af982f0",
+      "line": 119,
+      "why": "许可证里故意公开的商用联系邮箱"
+    },
+    {
+      "file": "docs/FAQ.md",
+      "rule": "email",
+      "hash": "7b9ab848659a72fb",
+      "line": 128,
+      "why": "许可证里故意公开的商用联系邮箱"
+    },
+    {
+      "file": "docker/sandbox/Dockerfile",
+      "rule": "personal-path",
+      "hash": "527fafe1e7bd8484",
+      "line": 31,
+      "why": "容器内固定的 agent 用户目录"
+    },
+    {
+      "file": "docker/sandbox/Dockerfile",
+      "rule": "personal-path",
+      "hash": "f90fb56543921f1d",
+      "line": 32,
+      "why": "容器内固定的 agent 用户目录"
+    },
+    {
+      "file": "docker/sandbox/Dockerfile",
+      "rule": "personal-path",
+      "hash": "95db1e123b727ef4",
+      "line": 43,
+      "why": "容器内固定的 agent 用户目录"
+    },
+    {
+      "file": "scripts/lib/sandbox/docker-args.mjs",
+      "rule": "personal-path",
+      "hash": "d511dcff29cf687e",
+      "line": 157,
+      "why": "容器内固定的 agent 用户目录"
+    },
+    {
+      "file": "scripts/lib/sandbox/egress.mjs",
+      "rule": "private-ip",
+      "hash": "8d5416bd965c3265",
+      "line": 65,
+      "why": "代理拒绝私网及保留网段的安全规则"
+    },
+    {
+      "file": "scripts/lib/sandbox/egress.mjs",
+      "rule": "private-ip",
+      "hash": "0f1d00d826b8f805",
+      "line": 66,
+      "why": "代理拒绝私网及保留网段的安全规则"
+    },
+    {
+      "file": "scripts/lib/sandbox/provider.mjs",
+      "rule": "personal-path",
+      "hash": "ae9cd935cd7c9ba3",
+      "line": 189,
+      "why": "容器内固定的 agent 用户目录"
+    },
+    {
+      "file": "scripts/lib/sandbox/provider.mjs",
+      "rule": "personal-path",
+      "hash": "c69758506a8c425a",
+      "line": 201,
+      "why": "容器内固定的 agent 用户目录"
+    },
+    {
+      "file": "scripts/lib/sandbox/run.mjs",
+      "rule": "key-sk",
+      "hash": "d649d4a32c9449b4",
+      "line": 15,
+      "why": "沙箱声明为非真实密钥的固定占位值"
+    },
+    {
+      "file": "scripts/lib/sandbox/run.mjs",
+      "rule": "personal-path",
+      "hash": "944b8954af08cc82",
+      "line": 44,
+      "why": "容器内固定的 agent 用户目录"
+    },
+    {
+      "file": "scripts/lib/sandbox/run.mjs",
+      "rule": "personal-path",
+      "hash": "ea760e40da0f9cc9",
+      "line": 45,
+      "why": "容器内固定的 agent 用户目录"
+    },
+    {
+      "file": "test/net.test.ts",
+      "rule": "private-ip",
+      "hash": "78d0db7bb4aa9f53",
+      "line": 265,
+      "why": "安全测试的私网示例地址"
+    },
+    {
+      "file": "test/net.test.ts",
+      "rule": "private-ip",
+      "hash": "d0e2d37df7dd797d",
+      "line": 292,
+      "why": "安全测试的私网示例地址"
+    },
+    {
+      "file": "test/redact0281.test.ts",
+      "rule": "bearer",
+      "hash": "78357b5f01adc682",
+      "line": 25,
+      "why": "脱敏及鉴权测试的明确虚构令牌样例"
+    },
+    {
+      "file": "test/redact0281.test.ts",
+      "rule": "bearer",
+      "hash": "4320c850378ecf4c",
+      "line": 43,
+      "why": "脱敏及鉴权测试的明确虚构令牌样例"
+    },
+    {
+      "file": "test/redact0281.test.ts",
+      "rule": "personal-path",
+      "hash": "c2a324f58fd77138",
+      "line": 52,
+      "why": "脱敏测试的虚构用户路径或容器固定路径"
+    },
+    {
+      "file": "test/redact0281.test.ts",
+      "rule": "personal-path",
+      "hash": "47e538519299dc86",
+      "line": 53,
+      "why": "脱敏测试的虚构用户路径或容器固定路径"
+    },
+    {
+      "file": "test/redact0281.test.ts",
+      "rule": "personal-path",
+      "hash": "1b2d68dc49a1c164",
+      "line": 54,
+      "why": "脱敏测试的虚构用户路径或容器固定路径"
+    },
+    {
+      "file": "test/redact0281.test.ts",
+      "rule": "personal-path",
+      "hash": "ecaa3d8d5fcb81bf",
+      "line": 55,
+      "why": "脱敏测试的虚构用户路径或容器固定路径"
+    },
+    {
+      "file": "test/redact0281.test.ts",
+      "rule": "personal-path",
+      "hash": "81a95d5a6d7a80dd",
+      "line": 57,
+      "why": "脱敏测试的虚构用户路径或容器固定路径"
+    },
+    {
+      "file": "test/redact0281.test.ts",
+      "rule": "email",
+      "hash": "39317cddf3cbbf4f",
+      "line": 70,
+      "why": "URL 凭据和恶意 URL 的拒绝测试样例"
+    },
+    {
+      "file": "test/redact0281.test.ts",
+      "rule": "email",
+      "hash": "e2aba3ee4fdce55c",
+      "line": 71,
+      "why": "URL 凭据和恶意 URL 的拒绝测试样例"
+    },
+    {
+      "file": "test/redact0281.test.ts",
+      "rule": "email",
+      "hash": "845c46cc91f762a0",
+      "line": 72,
+      "why": "URL 凭据和恶意 URL 的拒绝测试样例"
+    },
+    {
+      "file": "test/redact0281.test.ts",
+      "rule": "personal-path",
+      "hash": "d6359654dedc318a",
+      "line": 86,
+      "why": "脱敏测试的虚构用户路径或容器固定路径"
+    },
+    {
+      "file": "test/redact0281.test.ts",
+      "rule": "email",
+      "hash": "dca832cc59c58b02",
+      "line": 87,
+      "why": "URL 凭据和恶意 URL 的拒绝测试样例"
+    },
+    {
+      "file": "test/redact0281.test.ts",
+      "rule": "bearer",
+      "hash": "b624750f8f1f1dba",
+      "line": 88,
+      "why": "脱敏及鉴权测试的明确虚构令牌样例"
+    },
+    {
+      "file": "test/redact0281.test.ts",
+      "rule": "personal-path",
+      "hash": "372b997b9cc13acc",
+      "line": 103,
+      "why": "脱敏测试的虚构用户路径或容器固定路径"
+    },
+    {
+      "file": "test/redact0281.test.ts",
+      "rule": "personal-path",
+      "hash": "8ab981294339b9e8",
+      "line": 105,
+      "why": "脱敏测试的虚构用户路径或容器固定路径"
+    },
+    {
+      "file": "test/redact0281.test.ts",
+      "rule": "personal-path",
+      "hash": "798d09a800335f39",
+      "line": 109,
+      "why": "脱敏测试的虚构用户路径或容器固定路径"
+    },
+    {
+      "file": "test/redact0281.test.ts",
+      "rule": "personal-path",
+      "hash": "c987bd8dc4fdf53c",
+      "line": 114,
+      "why": "脱敏测试的虚构用户路径或容器固定路径"
+    },
+    {
+      "file": "test/redact0281.test.ts",
+      "rule": "personal-path",
+      "hash": "6f513be09bf375db",
+      "line": 119,
+      "why": "脱敏测试的虚构用户路径或容器固定路径"
+    },
+    {
+      "file": "test/redact0281.test.ts",
+      "rule": "personal-path",
+      "hash": "d6325d4cc07825d7",
+      "line": 120,
+      "why": "脱敏测试的虚构用户路径或容器固定路径"
+    },
+    {
+      "file": "test/redact0281.test.ts",
+      "rule": "personal-path",
+      "hash": "aae72a62c2158030",
+      "line": 126,
+      "why": "脱敏测试的虚构用户路径或容器固定路径"
+    },
+    {
+      "file": "test/redact0281.test.ts",
+      "rule": "personal-path",
+      "hash": "f0da963ba8aca32b",
+      "line": 128,
+      "why": "脱敏测试的虚构用户路径或容器固定路径"
+    },
+    {
+      "file": "test/redact0281.test.ts",
+      "rule": "personal-path",
+      "hash": "0e62612967a84d75",
+      "line": 132,
+      "why": "脱敏测试的虚构用户路径或容器固定路径"
+    },
+    {
+      "file": "test/redact0281.test.ts",
+      "rule": "personal-path",
+      "hash": "464177e1bba9c688",
+      "line": 139,
+      "why": "脱敏测试的虚构用户路径或容器固定路径"
+    },
+    {
+      "file": "test/redact0281.test.ts",
+      "rule": "personal-path",
+      "hash": "440fa182094d5502",
+      "line": 140,
+      "why": "脱敏测试的虚构用户路径或容器固定路径"
+    },
+    {
+      "file": "test/redact0281.test.ts",
+      "rule": "personal-path",
+      "hash": "c49b23f20b0064b8",
+      "line": 145,
+      "why": "脱敏测试的虚构用户路径或容器固定路径"
+    },
+    {
+      "file": "test/redact0281.test.ts",
+      "rule": "bearer",
+      "hash": "d978796b00ed13c5",
+      "line": 157,
+      "why": "脱敏及鉴权测试的明确虚构令牌样例"
+    },
+    {
+      "file": "test/runner0435.test.ts",
+      "rule": "bearer",
+      "hash": "0c7bf9247277179d",
+      "line": 134,
+      "why": "脱敏及鉴权测试的明确虚构令牌样例"
+    },
+    {
+      "file": "test/runs0451.test.ts",
+      "rule": "bearer",
+      "hash": "d6330c4497cb61bb",
+      "line": 128,
+      "why": "脱敏及鉴权测试的明确虚构令牌样例"
+    },
+    {
+      "file": "test/sandbox0462-docker.test.ts",
+      "rule": "private-ip",
+      "hash": "ab80f2bdac909508",
+      "line": 38,
+      "why": "安全测试的私网示例地址"
+    },
+    {
+      "file": "test/sandbox0462-docker.test.ts",
+      "rule": "private-ip",
+      "hash": "4edf02e8a8f9f93d",
+      "line": 39,
+      "why": "安全测试的私网示例地址"
+    },
+    {
+      "file": "test/sandbox0462-docker.test.ts",
+      "rule": "private-ip",
+      "hash": "66055174bfea9818",
+      "line": 40,
+      "why": "安全测试的私网示例地址"
+    },
+    {
+      "file": "test/sandbox0462.test.ts",
+      "rule": "email",
+      "hash": "d5fc46f85af21348",
+      "line": 25,
+      "why": "URL 凭据和恶意 URL 的拒绝测试样例"
+    },
+    {
+      "file": "test/sandbox0462.test.ts",
+      "rule": "private-ip",
+      "hash": "d7ca0ccf00cfc64d",
+      "line": 43,
+      "why": "安全测试的私网示例地址"
+    },
+    {
+      "file": "test/sandbox0462.test.ts",
+      "rule": "private-ip",
+      "hash": "6e09a96dd52c52ad",
+      "line": 52,
+      "why": "安全测试的私网示例地址"
+    },
+    {
+      "file": "test/sandbox0462.test.ts",
+      "rule": "private-ip",
+      "hash": "06899334808d7735",
+      "line": 57,
+      "why": "安全测试的私网示例地址"
+    },
+    {
+      "file": "test/sandbox0462.test.ts",
+      "rule": "private-ip",
+      "hash": "ee13230e42b25736",
+      "line": 75,
+      "why": "安全测试的私网示例地址"
+    },
+    {
+      "file": "test/sandbox0462.test.ts",
+      "rule": "email",
+      "hash": "2a346e80a52ea3d7",
+      "line": 101,
+      "why": "URL 凭据和恶意 URL 的拒绝测试样例"
+    },
+    {
+      "file": "test/sandbox0462.test.ts",
+      "rule": "email",
+      "hash": "21e8845b86f0cc40",
+      "line": 114,
+      "why": "URL 凭据和恶意 URL 的拒绝测试样例"
+    },
+    {
+      "file": "test/sandbox0462.test.ts",
+      "rule": "private-ip",
+      "hash": "5e1d98831af49454",
+      "line": 153,
+      "why": "安全测试的私网示例地址"
+    },
+    {
+      "file": "test/sandbox0462.test.ts",
+      "rule": "private-ip",
+      "hash": "8f66c88a5023fef9",
+      "line": 154,
+      "why": "安全测试的私网示例地址"
+    },
+    {
+      "file": "test/sandbox0462.test.ts",
+      "rule": "bearer",
+      "hash": "3d324a77d63bc4de",
+      "line": 228,
+      "why": "脱敏及鉴权测试的明确虚构令牌样例"
+    },
+    {
+      "file": "test/sandbox0462.test.ts",
+      "rule": "private-ip",
+      "hash": "7d662100d1b3d092",
+      "line": 246,
+      "why": "安全测试的私网示例地址"
+    },
+    {
+      "file": "test/sandbox0462.test.ts",
+      "rule": "private-ip",
+      "hash": "c77a3f442a18188d",
+      "line": 267,
+      "why": "安全测试的私网示例地址"
+    },
+    {
+      "file": "test/sandbox0462.test.ts",
+      "rule": "private-ip",
+      "hash": "9a5a949e305535c8",
+      "line": 316,
+      "why": "安全测试的私网示例地址"
+    },
+    {
+      "file": "test/sandbox0462.test.ts",
+      "rule": "private-ip",
+      "hash": "b396bab232317417",
+      "line": 342,
+      "why": "安全测试的私网示例地址"
+    },
+    {
+      "file": "test/sandbox0462.test.ts",
+      "rule": "private-ip",
+      "hash": "44c28dfbd143a197",
+      "line": 362,
+      "why": "安全测试的私网示例地址"
+    },
+    {
+      "file": "test/sources.test.ts",
+      "rule": "bearer",
+      "hash": "81f2e1ce55744ee0",
+      "line": 172,
+      "why": "脱敏及鉴权测试的明确虚构令牌样例"
+    },
+    {
+      "file": "test/sources.test.ts",
+      "rule": "bearer",
+      "hash": "d89cb369a619c942",
+      "line": 173,
+      "why": "脱敏及鉴权测试的明确虚构令牌样例"
+    },
+    {
+      "file": "test/task025.test.ts",
+      "rule": "bearer",
+      "hash": "82a0df845ebeb5b6",
+      "line": 129,
+      "why": "脱敏及鉴权测试的明确虚构令牌样例"
+    },
+    {
+      "file": "test/task025.test.ts",
+      "rule": "personal-path",
+      "hash": "922f0975f09adfe3",
+      "line": 236,
+      "why": "脱敏测试的虚构用户路径或容器固定路径"
+    },
+    {
+      "file": "test/sandbox0461.test.ts",
+      "rule": "personal-path",
+      "hash": "067c797aa01cd38c",
+      "line": 68,
+      "why": "脱敏测试的虚构用户路径或容器固定路径"
+    },
+    {
+      "file": "test/sandbox0461.test.ts",
+      "rule": "personal-path",
+      "hash": "da202efd8f28dbc9",
+      "line": 69,
+      "why": "脱敏测试的虚构用户路径或容器固定路径"
+    },
+    {
+      "file": "test/sandbox0461.test.ts",
+      "rule": "personal-path",
+      "hash": "aed750bf7afcd3d4",
+      "line": 302,
+      "why": "脱敏测试的虚构用户路径或容器固定路径"
+    },
+    {
+      "file": "test/sandbox0461.test.ts",
+      "rule": "personal-path",
+      "hash": "b28393c85a4b3f0d",
+      "line": 311,
+      "why": "脱敏测试的虚构用户路径或容器固定路径"
+    },
+    {
+      "file": "test/sandbox0461.test.ts",
+      "rule": "personal-path",
+      "hash": "519da8714cbb2fdd",
+      "line": 314,
+      "why": "脱敏测试的虚构用户路径或容器固定路径"
+    },
+    {
+      "file": "test/sandbox0461.test.ts",
+      "rule": "personal-path",
+      "hash": "c5ebabb62fe055d7",
+      "line": 326,
+      "why": "脱敏测试的虚构用户路径或容器固定路径"
+    },
+    {
+      "file": "test/sandbox0461.test.ts",
+      "rule": "personal-path",
+      "hash": "99713d3ba7ff5e0c",
+      "line": 328,
+      "why": "脱敏测试的虚构用户路径或容器固定路径"
+    }
+  ]
+}

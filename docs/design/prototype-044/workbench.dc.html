@@ -1,0 +1,604 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>PrivateBot 工作台</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#F4F4F0}
+a{color:#3B5200}a:hover{color:#18181B}
+button{font:inherit;cursor:pointer}
+input{font:inherit}
+@keyframes pbIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.pb-view{animation:pbIn .2s ease-out}
+.pb-card{transition:transform .15s ease,box-shadow .15s ease,opacity .25s ease,max-height .3s ease,background-color .2s ease}
+.pb-card:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(24,24,27,.08)}
+.pb-nav{transition:background-color .15s ease,color .15s ease}
+.pb-nav:hover{background:#ECECE6}
+@media (prefers-reduced-motion: reduce){.pb-view{animation:none}.pb-card,.pb-nav{transition:none}.pb-card:hover{transform:none}}
+</style>
+</helmet>
+<div style="min-height: 100vh; display: flex; background: #F4F4F0; color: #18181B; font-family: -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; font-size: 13px; line-height: 1.45">
+
+<nav aria-label="主导航" style="width: {{railW}}; flex: 0 0 auto; background: #FFFFFF; border-right: 1px solid #E4E4DF; display: flex; flex-direction: column; gap: 4px; padding: 12px 10px; box-sizing: border-box; transition: width .2s ease; overflow: hidden">
+<button type="button" aria-label="{{railToggleLabel}}" onClick="{{toggleRail}}" class="pb-nav" style="height: 36px; display: flex; align-items: center; gap: 10px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: #3F3F46">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+<sc-if value="{{railOpen}}" hint-placeholder-val="{{ true }}"><span style="font-weight: 700; font-size: 14px; white-space: nowrap">PrivateBot</span></sc-if>
+</button>
+<div style="height: 8px"></div>
+<sc-for list="{{nav}}" as="item" hint-placeholder-count="4">
+<button type="button" onClick="{{item.pick}}" class="pb-nav" aria-label="{{item.label}}" style="height: 40px; display: flex; align-items: center; gap: 10px; padding: 0 10px; border: 0; border-radius: 8px; background: {{item.bg}}; color: #18181B; font-weight: {{item.weight}}; white-space: nowrap">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{item.icon}}"></path></svg>
+<sc-if value="{{railOpen}}" hint-placeholder-val="{{ true }}"><span style="flex: 1; text-align: left">{{item.label}}</span><sc-if value="{{item.badge}}" hint-placeholder-val="{{ false }}"><span style="min-width: 18px; height: 18px; border-radius: 9px; background: #9A3412; color: #FFFFFF; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; padding: 0 5px">{{item.badge}}</span></sc-if></sc-if>
+</button>
+</sc-for>
+<div style="flex: 1"></div>
+<div style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; background: #F4F4F0; white-space: nowrap">
+<span style="width: 8px; height: 8px; border-radius: 4px; background: #15803D; flex: 0 0 auto"></span>
+<sc-if value="{{railOpen}}" hint-placeholder-val="{{ true }}"><span style="font-size: 12px; color: #3F3F46">执行器在线 · 在跑 {{runningCount}}/3</span></sc-if>
+</div>
+</nav>
+
+<main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+
+<header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 14px 24px; border-bottom: 1px solid #E4E4DF; background: #FFFFFF">
+<div style="display: flex; flex-direction: column; min-width: 160px">
+<span style="font-size: 16px; font-weight: 700">{{viewTitle}}</span>
+<span style="font-size: 12px; color: #6B6B73">{{viewSub}}</span>
+</div>
+<form style="flex: 1 1 520px; min-width: 0; display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 6px 0 14px; border: 1px solid #D4D4CE; border-radius: 12px; background: #FAFAF7" onSubmit="{{send}}">
+<label for="pb-ask" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">让 AI 做什么</label>
+<input id="pb-ask" value="{{draft}}" onChange="{{onType}}" placeholder="让 AI 做什么？例：联网找 3 个同类产品，整理成一页对比" style="flex: 1; min-width: 0; border: 0; background: transparent; outline: none; font-size: 14px; color: #18181B">
+<span style="display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 0 10px; border-radius: 14px; background: #ECECE6; font-size: 12px; color: #3F3F46; white-space: nowrap">项目 · ai-workbench</span>
+<button type="button" onClick="{{toggleAnswer}}" aria-pressed="{{answerOnly}}" style="height: 28px; padding: 0 10px; border-radius: 14px; border: 1px solid {{answerBorder}}; background: {{answerBg}}; font-size: 12px; color: #18181B; white-space: nowrap">只要回答</button>
+<button type="submit" style="height: 34px; padding: 0 16px; border: 0; border-radius: 9px; background: #D7F25A; color: #18181B; font-weight: 700; white-space: nowrap">派出去</button>
+</form>
+</header>
+
+<div style="padding: 20px 24px 40px; display: flex; flex-direction: column; gap: 18px">
+
+<sc-if value="{{isHome}}" hint-placeholder-val="{{ true }}">
+<div class="pb-view" style="display: flex; flex-direction: column; gap: 18px">
+
+<sc-if value="{{showIntro}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 10px; background: #FFFFFF; border: 1px solid #E4E4DF">
+<span style="width: 26px; height: 26px; border-radius: 13px; background: #18181B; color: #D7F25A; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; flex: 0 0 auto">P</span>
+<span style="flex: 1; color: #3F3F46">在上面一句话说要做什么 → 它挑合适的 AI 去做 → <b style="color: #18181B">要动你的代码、花你的钱之前，先在这里问你。</b></span>
+<button type="button" onClick="{{hideIntro}}" style="border: 0; background: transparent; color: #6B6B73; font-size: 12px">知道了</button>
+</div>
+</sc-if>
+
+<section aria-label="今日概况" style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px">
+<div style="background: #FFFFFF; border: 1px solid #E4E4DF; border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; color: #6B6B73">在跑</span>
+<div style="display: flex; align-items: center; gap: 10px">
+<span style="font-size: 22px; font-weight: 700; font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace">{{runningCount}}<span style="font-size: 13px; color: #6B6B73">/3</span></span>
+<div style="display: flex; gap: 4px">
+<sc-for list="{{slots}}" as="s" hint-placeholder-count="3"><span style="width: 18px; height: 8px; border-radius: 4px; background: {{s.bg}}"></span></sc-for>
+</div>
+</div>
+</div>
+<div style="background: {{needBg}}; border: 1px solid {{needLine}}; border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; color: #6B6B73">等你拍板</span>
+<span style="font-size: 22px; font-weight: 700; color: {{needInk}}; font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace">{{approvalCount}}</span>
+</div>
+<div style="background: #FFFFFF; border: 1px solid #E4E4DF; border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; color: #6B6B73">今日完成 · 近 7 天</span>
+<div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 8px">
+<span style="font-size: 22px; font-weight: 700; font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace">7</span>
+<svg width="84" height="28" viewBox="0 0 84 28" role="img" aria-label="近 7 天每天完成数"><sc-for list="{{doneBars}}" as="b" hint-placeholder-count="7"><rect x="{{b.x}}" y="{{b.y}}" width="8" height="{{b.h}}" rx="2" fill="{{b.fill}}"></rect></sc-for></svg>
+</div>
+</div>
+<div style="background: #FFFFFF; border: 1px solid #E4E4DF; border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; color: #6B6B73">今日 Token</span>
+<div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 8px">
+<span style="font-size: 22px; font-weight: 700; font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace">1.2M</span>
+<svg width="84" height="28" viewBox="0 0 84 28" role="img" aria-label="近 14 天 token 走势"><polyline points="{{spark}}" fill="none" stroke="#18181B" stroke-width="1.6" stroke-linejoin="round"></polyline></svg>
+</div>
+</div>
+<div style="background: #FFFFFF; border: 1px solid #E4E4DF; border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; color: #6B6B73">额度剩余</span>
+<sc-for list="{{quotaMini}}" as="q" hint-placeholder-count="3">
+<div style="display: flex; align-items: center; gap: 6px">
+<span style="width: 6px; height: 6px; border-radius: 3px; background: {{q.color}}; flex: 0 0 auto"></span>
+<span style="width: 46px; font-size: 11px; color: #3F3F46; white-space: nowrap; overflow: hidden">{{q.name}}</span>
+<span style="flex: 1; height: 5px; border-radius: 3px; background: #ECECE6; overflow: hidden"><span style="display: block; height: 5px; width: {{q.w}}; background: {{q.bar}}"></span></span>
+</div>
+</sc-for>
+</div>
+</section>
+
+<sc-if value="{{hasApprovals}}" hint-placeholder-val="{{ true }}">
+<section aria-label="等你拍板" style="display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 12px; font-weight: 700; color: #9A3412">等你拍板</span>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+<sc-for list="{{approvals}}" as="a" hint-placeholder-count="2">
+<div class="pb-card" style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; background: {{a.bg}}; border: 1px solid {{a.line}}; opacity: {{a.opacity}}">
+<span style="width: 30px; height: 30px; border-radius: 15px; background: {{a.riskBg}}; color: {{a.riskInk}}; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex: 0 0 auto">{{a.risk}}</span>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+<span style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{a.title}}</span>
+<span style="font-size: 12px; color: #6B6B73; font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{a.who}} · {{a.detail}}</span>
+</div>
+<sc-if value="{{a.pending}}" hint-placeholder-val="{{ true }}">
+<button type="button" onClick="{{a.reject}}" style="height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid #D4D4CE; background: #FFFFFF; color: #18181B">驳回</button>
+<button type="button" onClick="{{a.approve}}" style="height: 32px; padding: 0 14px; border-radius: 8px; border: 0; background: #18181B; color: #FFFFFF; font-weight: 600">批准</button>
+</sc-if>
+<sc-if value="{{a.settled}}" hint-placeholder-val="{{ false }}"><span style="font-weight: 700; color: {{a.doneInk}}; white-space: nowrap">{{a.doneText}}</span></sc-if>
+</div>
+</sc-for>
+</div>
+</section>
+</sc-if>
+
+<section aria-label="任务流" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; align-items: start">
+<sc-for list="{{lanes}}" as="lane" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; gap: 8px; min-width: 0">
+<div style="display: flex; align-items: center; gap: 6px; padding: 0 2px">
+<span style="width: 8px; height: 8px; border-radius: 4px; background: {{lane.dot}}"></span>
+<span style="font-weight: 700; font-size: 12px">{{lane.label}}</span>
+<span style="font-size: 12px; color: #6B6B73; font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace">{{lane.count}}</span>
+</div>
+<sc-for list="{{lane.tasks}}" as="t" hint-placeholder-count="2">
+<button type="button" onClick="{{t.open}}" class="pb-card" style="text-align: left; display: flex; flex-direction: column; gap: 8px; padding: 11px 12px; border-radius: 12px; background: {{t.bg}}; border: 1px solid {{t.line}}; color: #18181B">
+<span style="font-weight: 600; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden">{{t.title}}</span>
+<div style="display: flex; align-items: center; gap: 6px">
+<span style="width: 18px; height: 18px; border-radius: 9px; background: {{t.exColor}}; color: #FFFFFF; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto">{{t.exMark}}</span>
+<span style="font-size: 12px; color: #3F3F46; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{t.exName}}</span>
+<div style="display: flex; gap: 3px" aria-label="{{t.stageLabel}}">
+<sc-for list="{{t.dots}}" as="d" hint-placeholder-count="5"><span style="width: 6px; height: 6px; border-radius: 3px; background: {{d.bg}}"></span></sc-for>
+</div>
+</div>
+<sc-if value="{{t.hasBar}}" hint-placeholder-val="{{ false }}"><span style="display: block; height: 3px; border-radius: 2px; background: #ECECE6; overflow: hidden"><span style="display: block; height: 3px; width: {{t.barW}}; background: {{t.exColor}}; transition: width .2s ease"></span></span></sc-if>
+<sc-if value="{{t.hasNote}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: {{t.noteInk}}">{{t.note}}</span></sc-if>
+</button>
+</sc-for>
+<sc-if value="{{lane.empty}}" hint-placeholder-val="{{ false }}"><div style="height: 56px; border: 1px dashed #D4D4CE; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #8A8A92; font-size: 12px">空</div></sc-if>
+</div>
+</sc-for>
+</section>
+</div>
+</sc-if>
+
+<sc-if value="{{isCrew}}" hint-placeholder-val="{{ false }}">
+<div class="pb-view" style="display: flex; flex-direction: column; gap: 16px">
+<sc-for list="{{crewGroups}}" as="g" hint-placeholder-count="2">
+<section style="display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; align-items: baseline; gap: 8px"><span style="font-weight: 700; font-size: 12px">{{g.label}}</span><span style="font-size: 12px; color: #6B6B73">{{g.sub}}</span></div>
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px">
+<sc-for list="{{g.items}}" as="e" hint-placeholder-count="4">
+<button type="button" onClick="{{e.pick}}" class="pb-card" aria-expanded="{{e.open}}" style="text-align: left; display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 12px; background: #FFFFFF; border: 1px solid {{e.line}}; color: #18181B">
+<div style="display: flex; align-items: center; gap: 10px">
+<span style="width: 32px; height: 32px; border-radius: 16px; background: {{e.color}}; color: #FFFFFF; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto">{{e.mark}}</span>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+<span style="font-weight: 700">{{e.name}}</span>
+<span style="font-size: 12px; color: #3F3F46; display: inline-flex; align-items: center; gap: 5px"><span style="width: 6px; height: 6px; border-radius: 3px; background: {{e.stateDot}}"></span>{{e.stateText}}</span>
+</div>
+<svg width="36" height="36" viewBox="0 0 36 36" role="img" aria-label="{{e.quotaLabel}}"><circle cx="18" cy="18" r="14" fill="none" stroke="#ECECE6" stroke-width="4"></circle><circle cx="18" cy="18" r="14" fill="none" stroke="{{e.ringColor}}" stroke-width="4" stroke-linecap="round" stroke-dasharray="{{e.dash}}" transform="rotate(-90 18 18)"></circle></svg>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 4px">
+<sc-for list="{{e.caps}}" as="c" hint-placeholder-count="2"><span style="height: 20px; padding: 0 7px; border-radius: 10px; background: {{c.bg}}; color: {{c.ink}}; font-size: 11px; display: inline-flex; align-items: center">{{c.text}}</span></sc-for>
+</div>
+<div style="display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: #3F3F46">
+<span>{{e.load}}</span><span style="font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace">{{e.quotaText}}</span>
+</div>
+</button>
+</sc-for>
+</div>
+<sc-if value="{{g.hasOpen}}" hint-placeholder-val="{{ false }}">
+<div class="pb-view" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 12px; border-radius: 14px; background: #FFFFFF; border: 1px solid #18181B">
+<div style="display: flex; flex-direction: column; gap: 10px">
+<span style="font-size: 12px; font-weight: 700">管理 · {{openEx.name}}</span>
+<sc-for list="{{openEx.accounts}}" as="ac" hint-placeholder-count="2">
+<div style="display: flex; align-items: center; gap: 8px">
+<span style="width: 110px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ac.name}}</span>
+<span style="flex: 1; height: 6px; border-radius: 3px; background: #ECECE6; overflow: hidden"><span style="display: block; height: 6px; width: {{ac.w}}; background: {{ac.bar}}"></span></span>
+<span style="width: 74px; text-align: right; font-size: 12px; font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace">{{ac.text}}</span>
+</div>
+</sc-for>
+<div style="display: flex; flex-wrap: wrap; gap: 6px">
+<sc-for list="{{openEx.limits}}" as="l" hint-placeholder-count="3"><span style="height: 24px; padding: 0 9px; border-radius: 12px; background: #F4F4F0; font-size: 12px; display: inline-flex; align-items: center; gap: 4px"><span style="color: #6B6B73">{{l.k}}</span><b>{{l.v}}</b></span></sc-for>
+</div>
+<div style="display: flex; align-items: center; gap: 8px">
+<span style="font-size: 12px; color: #6B6B73; width: 110px">近 30 天一次过</span>
+<span style="flex: 1; height: 6px; border-radius: 3px; background: #ECECE6; overflow: hidden"><span style="display: block; height: 6px; width: {{openEx.passW}}; background: #15803D"></span></span>
+<span style="width: 74px; text-align: right; font-size: 12px">{{openEx.passText}}</span>
+</div>
+<sc-if value="{{openEx.hasWhy}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: #9A3412; background: #FFF6EE; padding: 8px 10px; border-radius: 8px">{{openEx.why}}</span></sc-if>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; font-weight: 700">任务</span>
+<sc-for list="{{openEx.tasks}}" as="t" hint-placeholder-count="3">
+<button type="button" onClick="{{t.open}}" class="pb-card" style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 9px; border: 1px solid #E4E4DF; background: #FAFAF7; text-align: left; color: #18181B">
+<span style="width: 8px; height: 8px; border-radius: 4px; background: {{t.dot}}; flex: 0 0 auto"></span>
+<span style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{t.title}}</span>
+<div style="display: flex; gap: 3px"><sc-for list="{{t.dots}}" as="d" hint-placeholder-count="5"><span style="width: 6px; height: 6px; border-radius: 3px; background: {{d.bg}}"></span></sc-for></div>
+</button>
+</sc-for>
+<sc-if value="{{openEx.noTasks}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: #8A8A92">手上没活</span></sc-if>
+</div>
+</div>
+</sc-if>
+</section>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{isLog}}" hint-placeholder-val="{{ false }}">
+<div class="pb-view" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-items: start">
+<div style="grid-column: span 2; background: #FFFFFF; border: 1px solid #E4E4DF; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: center; gap: 10px"><span style="font-weight: 700; font-size: 12px; flex: 1">Token · 近 14 天</span>
+<sc-for list="{{legend}}" as="lg" hint-placeholder-count="3"><span style="font-size: 11px; color: #3F3F46; display: inline-flex; align-items: center; gap: 4px"><span style="width: 8px; height: 8px; border-radius: 2px; background: {{lg.color}}"></span>{{lg.name}}</span></sc-for>
+</div>
+<svg width="100%" height="150" viewBox="0 0 560 150" preserveAspectRatio="none" role="img" aria-label="近 14 天每天 token 用量，按执行者堆叠"><sc-for list="{{usageBars}}" as="u" hint-placeholder-count="14"><rect x="{{u.x}}" y="{{u.y1}}" width="26" height="{{u.h1}}" fill="#18181B"></rect><rect x="{{u.x}}" y="{{u.y2}}" width="26" height="{{u.h2}}" fill="#3B82F6"></rect></sc-for></svg>
+</div>
+<div style="background: #FFFFFF; border: 1px solid #E4E4DF; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+<span style="font-weight: 700; font-size: 12px">结局 · 近 30 天</span>
+<div style="display: flex; height: 14px; border-radius: 7px; overflow: hidden">
+<span style="width: 72%; background: #15803D"></span><span style="width: 14%; background: #D7F25A"></span><span style="width: 8%; background: #9A3412"></span><span style="width: 6%; background: #B91C1C"></span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; font-size: 12px; color: #3F3F46">
+<span>● 一次过 72%</span><span>● 返工后过 14%</span><span>● 你接手 8%</span><span>● 失败 6%</span>
+</div>
+</div>
+<div style="grid-column: span 3; background: #FFFFFF; border: 1px solid #E4E4DF; border-radius: 12px; padding: 6px 14px">
+<sc-for list="{{audit}}" as="r" hint-placeholder-count="5">
+<div style="display: flex; align-items: center; gap: 10px; height: 36px; border-bottom: 1px solid #F0F0EB; font-size: 12px">
+<span style="width: 44px; color: #6B6B73; font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace">{{r.time}}</span>
+<span style="width: 18px; height: 18px; border-radius: 9px; background: {{r.color}}; color: #FFFFFF; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center">{{r.mark}}</span>
+<span style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.text}}</span>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isSet}}" hint-placeholder-val="{{ false }}">
+<div class="pb-view" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">
+<sc-for list="{{settings}}" as="s" hint-placeholder-count="5">
+<div style="background: #FFFFFF; border: 1px solid #E4E4DF; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 4px">
+<span style="font-weight: 700">{{s.name}}</span>
+<span style="font-size: 12px; color: #6B6B73">{{s.sub}}</span>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+</div>
+</main>
+
+<div style="position: fixed; inset: 0; background: rgba(24,24,27,.18); opacity: {{scrimOpacity}}; pointer-events: {{scrimEvents}}; transition: opacity .2s ease" onClick="{{closeTask}}" aria-hidden="true"></div>
+<aside aria-label="任务详情" style="position: fixed; top: 0; right: 0; bottom: 0; width: 420px; max-width: 100%; background: #FFFFFF; border-left: 1px solid #E4E4DF; box-shadow: -12px 0 32px rgba(24,24,27,.10); transform: {{panelX}}; transition: transform .2s ease; display: flex; flex-direction: column; overflow-y: auto">
+<div style="display: flex; align-items: center; gap: 8px; padding: 14px 18px; border-bottom: 1px solid #E4E4DF">
+<span style="height: 22px; padding: 0 8px; border-radius: 11px; background: {{sel.pillBg}}; color: {{sel.pillInk}}; font-size: 12px; display: inline-flex; align-items: center">{{sel.status}}</span>
+<span style="font-size: 12px; color: #6B6B73; font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace">T-{{sel.id}}</span>
+<span style="flex: 1"></span>
+<button type="button" onClick="{{closeTask}}" aria-label="关闭详情" style="width: 32px; height: 32px; border: 0; border-radius: 8px; background: #F4F4F0">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#18181B" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+</button>
+</div>
+<div style="padding: 16px 18px; display: flex; flex-direction: column; gap: 16px">
+<span style="font-size: 16px; font-weight: 700">{{sel.title}}</span>
+<div style="display: flex; align-items: center; gap: 8px">
+<span style="width: 22px; height: 22px; border-radius: 11px; background: {{sel.exColor}}; color: #FFFFFF; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center">{{sel.exMark}}</span>
+<span style="font-size: 12px; color: #3F3F46">{{sel.exName}} · {{sel.route}}</span>
+</div>
+<div style="display: flex; flex-direction: column">
+<sc-for list="{{sel.steps}}" as="st" hint-placeholder-count="4">
+<div style="display: flex; gap: 10px">
+<div style="display: flex; flex-direction: column; align-items: center; width: 18px">
+<span style="width: 14px; height: 14px; border-radius: 7px; background: {{st.bg}}; border: 2px solid {{st.ring}}; box-sizing: border-box"></span>
+<span style="flex: 1; width: 2px; background: #ECECE6; min-height: 14px"></span>
+</div>
+<div style="flex: 1; padding-bottom: 10px; display: flex; flex-direction: column">
+<span style="font-weight: 600; font-size: 13px">{{st.text}}</span>
+<span style="font-size: 12px; color: #6B6B73; font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace">{{st.sub}}</span>
+</div>
+</div>
+</sc-for>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px; padding: 12px; border-radius: 10px; background: #F4F4F0">
+<span style="font-size: 12px; font-weight: 700">结果</span>
+<span style="font-size: 13px; color: #3F3F46">{{sel.result}}</span>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 6px">
+<span style="font-size: 12px; color: #6B6B73; width: 100%">项目备忘</span>
+<span style="height: 24px; padding: 0 9px; border-radius: 12px; background: #F4F4F0; font-size: 12px; display: inline-flex; align-items: center">测试用 npm test</span>
+<span style="height: 24px; padding: 0 9px; border-radius: 12px; background: #F4F4F0; font-size: 12px; display: inline-flex; align-items: center">界面文案用中文</span>
+<span style="height: 24px; padding: 0 9px; border-radius: 12px; background: #F4F4F0; font-size: 12px; display: inline-flex; align-items: center">零依赖</span>
+</div>
+<div style="display: flex; gap: 8px">
+<button type="button" style="height: 36px; padding: 0 14px; border-radius: 9px; border: 0; background: #18181B; color: #FFFFFF; font-weight: 600">{{sel.primary}}</button>
+<button type="button" style="height: 36px; padding: 0 14px; border-radius: 9px; border: 1px solid #D4D4CE; background: #FFFFFF; color: #18181B">我来接手</button>
+</div>
+</div>
+</aside>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      view: 'home', rail: true, intro: true, sel: null, openEx: 'pool', draft: '', answerOnly: false, nextId: 38,
+      approvals: [
+        { id: 1, title: '合并 T-33「看板按执行者筛选」到 main', who: 'Codex', detail: '+86 −12 · 3 个文件 · 测试通过', risk: '中', st: 'pending' },
+        { id: 2, title: 'T-34 想运行 npm install puppeteer', who: '反代池', detail: '命令会联网下载约 170MB', risk: '高', st: 'pending' }
+      ],
+      tasks: [
+        { id: 34, title: '联网找 3 个同类产品，整理成一页对比', ex: 'pool', col: 'run', stage: 2, pct: 55, note: '已读 4 个网页' },
+        { id: 35, title: '做一个科技风的宣传页，要能交互', ex: 'claude', col: 'run', stage: 1, pct: 20, note: '写第 2 个文件' },
+        { id: 36, title: 'README 补安装截图', ex: 'pool', col: 'queue', stage: 0 },
+        { id: 37, title: '整理本周用量周报', ex: 'brain', col: 'queue', stage: 0, note: '大脑分派中…' },
+        { id: 33, title: '看板按执行者筛选', ex: 'codex', col: 'wait', stage: 3, note: '等你批合并' },
+        { id: 15, title: '阅读 README，分析主要功能', ex: 'pool', col: 'wait', stage: 1, failed: true, note: '被拦住：没配项目路径' },
+        { id: 31, title: '修复看板窄屏溢出', ex: 'claude', col: 'done', stage: 5 },
+        { id: 30, title: '说说这个项目是干什么的', ex: 'dsh', col: 'done', stage: 5, note: '只要回答' }
+      ]
+    };
+  }
+
+  ex(key) {
+    const E = {
+      pool: { name: '反代池', mark: '池', color: '#2563EB' },
+      claude: { name: 'Claude', mark: 'C', color: '#C2410C' },
+      codex: { name: 'Codex', mark: 'Cx', color: '#18181B' },
+      workbuddy: { name: 'WorkBuddy', mark: 'W', color: '#B45309' },
+      dsh: { name: 'dsh', mark: 'd', color: '#0F766E' },
+      local: { name: '本机', mark: '本', color: '#7C3AED' },
+      zcode: { name: 'ZCode', mark: 'Z', color: '#15803D' },
+      autoclaw: { name: 'AutoClaw', mark: 'A', color: '#BE123C' },
+      brain: { name: '大脑挑人中', mark: '?', color: '#8A8A92' }
+    };
+    return E[key] || E.brain;
+  }
+
+  dots(stage, failed) {
+    const out = [];
+    for (let i = 0; i < 5; i++) {
+      let bg = '#E4E4DF';
+      if (i < stage) bg = '#18181B';
+      if (failed && i === stage) bg = '#B91C1C';
+      out.push({ bg });
+    }
+    return out;
+  }
+
+  taskCard(t) {
+    const e = this.ex(t.ex);
+    const wait = t.col === 'wait';
+    return {
+      title: t.title,
+      exName: e.name, exMark: e.mark, exColor: e.color,
+      dots: this.dots(t.stage, t.failed),
+      stageLabel: '进度 ' + t.stage + '/5：领取、编码、测试、合并、推送',
+      hasBar: t.col === 'run', barW: (t.pct || 0) + '%',
+      hasNote: Boolean(t.note), note: t.note || '',
+      noteInk: t.failed ? '#B91C1C' : (wait ? '#9A3412' : '#6B6B73'),
+      bg: t.failed ? '#FEF2F2' : (wait ? '#FFF6EE' : '#FFFFFF'),
+      line: t.failed ? '#FECACA' : (wait ? '#FED7AA' : '#E4E4DF'),
+      open: () => this.setState({ sel: t.id })
+    };
+  }
+
+  detail(t) {
+    const e = this.ex(t.ex);
+    const S = {
+      run: ['在跑', '#EFF6FF', '#1D4ED8'], queue: ['排队', '#F4F4F0', '#3F3F46'],
+      wait: [t.failed ? '被拦住' : '等你', t.failed ? '#FEF2F2' : '#FFF6EE', t.failed ? '#B91C1C' : '#9A3412'],
+      done: ['完成', '#F0FDF4', '#15803D']
+    }[t.col];
+    const done = (text, sub) => ({ text, sub, bg: '#18181B', ring: '#18181B' });
+    const now = (text, sub) => ({ text, sub, bg: '#FFFFFF', ring: '#2563EB' });
+    const todo = (text, sub) => ({ text, sub, bg: '#FFFFFF', ring: '#D4D4CE' });
+    const bad = (text, sub) => ({ text, sub, bg: '#B91C1C', ring: '#B91C1C' });
+    let steps;
+    if (t.id === 34) steps = [done('领取', '反代池 · 百炼 DeepSeek · 00:02'), done('读网页 ×4', 'cn.bing.com · notion.so · linear.app …'), now('写文件', 'docs/compare.md（进行中）'), todo('测试', ''), todo('合并 → 推送', '')];
+    else if (t.failed) steps = [done('领取', '反代池 · 00:01'), bad('被拦住了', '没配项目路径：执行器的 projects 里没有这个名字'), todo('编码', ''), todo('合并 → 推送', '')];
+    else if (t.col === 'wait') steps = [done('领取', e.name), done('编码', '3 个文件 · +86 −12'), done('测试', '906 / 906 通过'), now('合并', '等你批'), todo('推送', '')];
+    else if (t.col === 'done') steps = [done('领取', e.name), done('编码', t.note === '只要回答' ? '只要回答，不改文件' : '2 个文件'), done('完成', '今天 10:42')];
+    else if (t.col === 'queue') steps = [now('排队', t.ex === 'brain' ? '大脑在挑人：看难度、战绩、额度' : '在跑满了，空出来就开始'), todo('编码', ''), todo('测试', ''), todo('合并 → 推送', '')];
+    else steps = [done('领取', e.name), now('编码', '进行中'), todo('测试', ''), todo('合并 → 推送', '')];
+    const result = t.col === 'done' ? '完成了。点「看改动」能看到每个文件改了什么。'
+      : t.failed ? '还没开始干活就被拦住了。把项目路径配上，点「重试」从这一步接着来。'
+      : t.col === 'wait' ? '改完了，测试全过。批准后合并到 main，推送还会再问你一次。'
+      : '还在做，做完这里会出现它的回答。';
+    const primary = t.failed ? '去配项目路径' : t.col === 'wait' ? '批准合并' : t.col === 'done' ? '看改动' : '看实时过程';
+    return {
+      id: t.id, title: t.title, status: S[0], pillBg: S[1], pillInk: S[2],
+      exName: e.name, exMark: e.mark, exColor: e.color,
+      route: t.ex === 'brain' ? '还没派' : '大脑派的 · 难度 3/5',
+      steps, result, primary
+    };
+  }
+
+  crew() {
+    const T = this.state.tasks;
+    const C = (text, kind) => {
+      const k = { ok: ['#F0FDF4', '#15803D'], warn: ['#FFF6EE', '#9A3412'], mute: ['#F4F4F0', '#3F3F46'] }[kind];
+      return { text, bg: k[0], ink: k[1] };
+    };
+    const list = [
+      { key: 'pool', state: 'on', caps: [C('改代码', 'ok'), C('联网', 'ok')], pct: 15, quota: '¥3.40', low: true,
+        accounts: [{ name: '百炼代金券', w: '62%', bar: '#2563EB', text: '¥186' }, { name: 'DeepSeek 官方', w: '8%', bar: '#B91C1C', text: '¥3.40' }],
+        limits: [{ k: '同时', v: '2' }, { k: '单任务', v: '30 分' }, { k: '每日', v: '5M' }], pass: 82, passText: '82% · 12 单' },
+      { key: 'claude', state: 'on', caps: [C('改代码', 'ok'), C('联网', 'ok')], pct: 60, quota: '60%',
+        accounts: [{ name: 'Pro 订阅 · 5 小时窗口', w: '40%', bar: '#C2410C', text: '已用 40%' }],
+        limits: [{ k: '同时', v: '1' }, { k: '单任务', v: '60 分' }], pass: 75, passText: '75% · 8 单' },
+      { key: 'codex', state: 'on', caps: [C('改代码', 'ok'), C('联网', 'ok')], pct: 88, quota: '88%',
+        accounts: [{ name: 'ChatGPT Plus · 5 小时', w: '12%', bar: '#18181B', text: '已用 12%' }],
+        limits: [{ k: '同时', v: '1' }, { k: '单任务', v: '60 分' }], pass: 0, passText: '样本太少' },
+      { key: 'workbuddy', state: 'login', caps: [C('改代码', 'ok'), C('待登录', 'warn')], pct: 0, quota: '—',
+        accounts: [{ name: 'WorkBuddy 积分', w: '0%', bar: '#B45309', text: '读不到' }],
+        limits: [{ k: '同时', v: '1' }], pass: 0, passText: '还没干过', why: '还没登录：在终端里跑一次 codebuddy 再 /login。' },
+      { key: 'dsh', state: 'on', caps: [C('只读', 'warn'), C('联网', 'ok')], pct: 100, quota: '按量',
+        accounts: [{ name: 'DeepSeek 官方（同反代池）', w: '8%', bar: '#B91C1C', text: '¥3.40' }],
+        limits: [{ k: '同时', v: '1' }], pass: 100, passText: '100% · 3 单', why: '只读的原因：dsh 的插件还装不上，它动手前没法先问你。装上就能放开。' },
+      { key: 'local', state: 'off', caps: [C('改代码', 'ok')], pct: 0, quota: '—',
+        accounts: [], limits: [{ k: '同时', v: '1' }], pass: 0, passText: '还没干过', why: '离线：这台机器上的本机模型没开。' },
+      { key: 'zcode', state: 'manual', caps: [C('你手动贴', 'mute')], pct: 0, quota: '—', accounts: [], limits: [], pass: 0, passText: '—', why: 'ZCode 的额度只能在它自己的应用里用，这里只帮你记任务。' },
+      { key: 'autoclaw', state: 'manual', caps: [C('你手动贴', 'mute')], pct: 0, quota: '—', accounts: [], limits: [], pass: 0, passText: '—', why: 'AutoClaw 同理：在它的应用里用。' }
+    ];
+    const stateOf = { on: ['#15803D', '在线'], login: ['#9A3412', '待登录'], off: ['#8A8A92', '离线'], manual: ['#8A8A92', '手动'] };
+    const card = (x) => {
+      const e = this.ex(x.key);
+      const mine = T.filter((t) => t.ex === x.key);
+      const run = mine.filter((t) => t.col === 'run').length;
+      const q = mine.filter((t) => t.col === 'queue').length;
+      const open = this.state.openEx === x.key;
+      return {
+        key: x.key, name: e.name, mark: e.mark, color: e.color,
+        stateDot: stateOf[x.state][0], stateText: stateOf[x.state][1],
+        caps: x.caps, quotaText: x.quota,
+        quotaLabel: '额度剩余 ' + x.pct + '%',
+        dash: (x.pct * 0.88).toFixed(1) + ' 88',
+        ringColor: x.low ? '#B91C1C' : e.color,
+        load: run || q ? ('在跑 ' + run + ' · 排队 ' + q) : '空闲',
+        line: open ? '#18181B' : '#E4E4DF', open: open ? 'true' : 'false',
+        pick: () => this.setState({ openEx: open ? null : x.key }),
+        raw: x, tasks: mine
+      };
+    };
+    const cards = list.map(card);
+    const auto = cards.filter((c) => c.raw.state !== 'manual');
+    const manual = cards.filter((c) => c.raw.state === 'manual');
+    const openCard = cards.find((c) => c.key === this.state.openEx);
+    const laneDot = { run: '#2563EB', queue: '#8A8A92', wait: '#9A3412', done: '#15803D' };
+    const openEx = openCard ? {
+      name: openCard.name,
+      accounts: openCard.raw.accounts,
+      limits: openCard.raw.limits,
+      passW: openCard.raw.pass + '%', passText: openCard.raw.passText,
+      hasWhy: Boolean(openCard.raw.why), why: openCard.raw.why || '',
+      tasks: openCard.tasks.map((t) => ({ title: t.title, dot: t.failed ? '#B91C1C' : laneDot[t.col], dots: this.dots(t.stage, t.failed), open: () => this.setState({ sel: t.id }) })),
+      noTasks: openCard.tasks.length === 0
+    } : { name: '', accounts: [], limits: [], passW: '0%', passText: '', hasWhy: false, why: '', tasks: [], noTasks: true };
+    const groups = [
+      { label: '自动干活', sub: '派给它们，它们自己做，危险动作先问你', items: auto, hasOpen: Boolean(openCard && openCard.raw.state !== 'manual') },
+      { label: '你手动用', sub: '额度只能在它们自己的应用里用，这里只记账', items: manual, hasOpen: Boolean(openCard && openCard.raw.state === 'manual') }
+    ];
+    return { groups, openEx };
+  }
+
+  renderVals() {
+    const s = this.state;
+    const views = { home: ['工作台', '派活、拍板、看进度，都在这一页'], crew: ['剧组', '谁能干什么、还剩多少额度、手上有什么活'], log: ['记录', '花了多少、做成了多少、谁做了什么'], set: ['设置', '接入、安全、通知、外观、备份'] };
+    const icons = {
+      home: 'M4 5h7v7H4zM13 5h7v4h-7zM13 11h7v8h-7zM4 14h7v5H4z',
+      crew: 'M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM3 19c0-3 3-5 6-5s6 2 6 5M16 11a3 3 0 1 0 0-6M18 14c2 .6 3 2.4 3 5',
+      log: 'M4 19V5M4 19h16M8 15v-4M12 15V8M16 15v-6',
+      set: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19 12l2-1-1-3-2 .3-1.3-1.3.3-2-3-1-1 2h-2l-1-2-3 1 .3 2L6 7.3 4 7 3 10l2 1v2l-2 1 1 3 2-.3L7.3 18 7 20l3 1 1-2h2l1 2 3-1-.3-2 1.3-1.3 2 .3 1-3-2-1z'
+    };
+    const pending = s.approvals.filter((a) => a.st === 'pending').length;
+    const nav = ['home', 'crew', 'log', 'set'].map((k) => ({
+      label: views[k][0], icon: icons[k],
+      bg: s.view === k ? '#D7F25A' : 'transparent', weight: s.view === k ? '700' : '400',
+      badge: k === 'home' && pending ? String(pending) : '',
+      pick: () => this.setState({ view: k, sel: null })
+    }));
+
+    const running = s.tasks.filter((t) => t.col === 'run').length;
+    const slots = [0, 1, 2].map((i) => ({ bg: i < running ? '#2563EB' : '#E4E4DF' }));
+    const doneSeries = [3, 5, 2, 6, 4, 8, 7];
+    const doneBars = doneSeries.map((v, i) => ({ x: i * 12, h: v * 3, y: 28 - v * 3, fill: i === 6 ? '#18181B' : '#C9C9C2' }));
+    const tok = [3.1, 3.4, 1.8, 2.9, 4.0, 4.6, 5.9, 1.2, 0.2, 0.6, 1.5, 0.7, 1.0, 1.2];
+    const max = 6;
+    const spark = tok.map((v, i) => (i * 6.4).toFixed(1) + ',' + (26 - (v / max) * 24).toFixed(1)).join(' ');
+    const quotaMini = [
+      { name: '反代池', color: '#2563EB', w: '15%', bar: '#B91C1C' },
+      { name: 'Claude', color: '#C2410C', w: '60%', bar: '#18181B' },
+      { name: 'Codex', color: '#18181B', w: '88%', bar: '#18181B' }
+    ];
+
+    const approvals = s.approvals.map((a) => {
+      const settle = (st) => {
+        this.setState({ approvals: this.state.approvals.map((x) => x.id === a.id ? { ...x, st } : x) });
+        setTimeout(() => this.setState({ approvals: this.state.approvals.filter((x) => x.id !== a.id) }), 900);
+      };
+      const ok = a.st === 'ok';
+      const no = a.st === 'no';
+      return {
+        title: a.title, who: a.who, detail: a.detail, risk: a.risk,
+        riskBg: a.risk === '高' ? '#FEE2E2' : '#FFEDD5', riskInk: a.risk === '高' ? '#B91C1C' : '#9A3412',
+        pending: a.st === 'pending', settled: a.st !== 'pending',
+        doneText: ok ? '已批准合并 ✓' : '已驳回', doneInk: ok ? '#15803D' : '#6B6B73',
+        bg: ok ? '#F0FDF4' : no ? '#F4F4F0' : '#FFFFFF',
+        line: ok ? '#BBF7D0' : '#FED7AA',
+        opacity: no ? '0.6' : '1',
+        approve: () => settle('ok'), reject: () => settle('no')
+      };
+    });
+
+    const laneDef = [['queue', '排队', '#8A8A92'], ['run', '在跑', '#2563EB'], ['wait', '等你', '#9A3412'], ['done', '今天完成', '#15803D']];
+    const lanes = laneDef.map(([k, label, dot]) => {
+      const tasks = s.tasks.filter((t) => t.col === k).map((t) => this.taskCard(t));
+      return { label, dot, count: String(tasks.length), tasks, empty: tasks.length === 0 };
+    });
+
+    const crew = this.crew();
+    const selTask = s.tasks.find((t) => t.id === s.sel) || s.tasks[0];
+
+    const usage = [3.1, 3.4, 1.8, 2.9, 4.0, 4.6, 5.9, 1.2, 0.2, 0.6, 1.5, 0.7, 1.0, 1.2];
+    const pool = [0, 0, 0, 0, 0, 0, 0, 0.2, 0.2, 0.6, 1.4, 0.6, 1.0, 1.1];
+    const usageBars = usage.map((v, i) => {
+      const hp = (pool[i] / 6) * 140;
+      const ht = (v / 6) * 140;
+      const hb = Math.max(0, ht - hp);
+      return { x: 6 + i * 39.5, y1: 146 - ht, h1: hb, y2: 146 - hp, h2: hp };
+    });
+
+    return {
+      railW: s.rail ? '200px' : '60px', railOpen: s.rail,
+      railToggleLabel: s.rail ? '收起侧边栏' : '展开侧边栏',
+      toggleRail: () => this.setState({ rail: !this.state.rail }),
+      nav,
+      viewTitle: views[s.view][0], viewSub: views[s.view][1],
+      isHome: s.view === 'home', isCrew: s.view === 'crew', isLog: s.view === 'log', isSet: s.view === 'set',
+      showIntro: s.intro, hideIntro: () => this.setState({ intro: false }),
+      draft: s.draft,
+      onType: (e) => this.setState({ draft: e.target.value }),
+      answerOnly: s.answerOnly ? 'true' : 'false',
+      answerBg: s.answerOnly ? '#18181B' : '#FFFFFF', answerBorder: s.answerOnly ? '#18181B' : '#D4D4CE',
+      toggleAnswer: () => this.setState({ answerOnly: !this.state.answerOnly }),
+      send: (e) => {
+        e.preventDefault();
+        const title = (this.state.draft || '').trim();
+        if (!title) return;
+        const t = { id: this.state.nextId, title, ex: 'brain', col: 'queue', stage: 0, note: this.state.answerOnly ? '只要回答 · 大脑分派中…' : '大脑分派中…' };
+        this.setState({ tasks: [t, ...this.state.tasks], draft: '', nextId: this.state.nextId + 1, view: 'home' });
+      },
+      runningCount: String(running), slots, doneBars, spark, quotaMini,
+      approvalCount: String(pending), hasApprovals: s.approvals.length > 0, approvals,
+      needBg: pending ? '#FFF6EE' : '#FFFFFF', needLine: pending ? '#FED7AA' : '#E4E4DF', needInk: pending ? '#9A3412' : '#18181B',
+      lanes,
+      crewGroups: crew.groups, openEx: crew.openEx,
+      legend: [{ name: 'Codex / Claude', color: '#18181B' }, { name: '反代池', color: '#3B82F6' }],
+      usageBars,
+      audit: [
+        { time: '10:42', mark: 'C', color: '#C2410C', text: 'T-31 完成：修复看板窄屏溢出，合并到 main' },
+        { time: '10:31', mark: '我', color: '#18181B', text: '你批准了 T-31 的合并' },
+        { time: '10:12', mark: '池', color: '#2563EB', text: 'T-34 读网页 cn.bing.com、notion.so 等 4 个' },
+        { time: '09:58', mark: '?', color: '#8A8A92', text: '大脑把 T-34 派给反代池 · 难度 2/5 · 联网整理，便宜' },
+        { time: '09:40', mark: '池', color: '#2563EB', text: 'T-15 被拦住：没配项目路径' }
+      ],
+      settings: [
+        { name: '接入', sub: '模型后端、反代、GitHub、额度来源' },
+        { name: '安全', sub: '审批规则、暂停所有自动执行（收在这里）' },
+        { name: '通知', sub: '企业微信：失败必推、等审批推' },
+        { name: '外观', sub: '称呼（剧组）、主题' },
+        { name: '备份', sub: '每天 3:30 自动备份' }
+      ],
+      sel: this.detail(selTask),
+      panelX: s.sel ? 'translateX(0)' : 'translateX(105%)',
+      scrimOpacity: s.sel ? '1' : '0', scrimEvents: s.sel ? 'auto' : 'none',
+      closeTask: () => this.setState({ sel: null })
+    };
+  }
+}
+</script>
+</body>
+</html>

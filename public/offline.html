@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>工作台没有响应</title>
+<style>
+  :root { --bg: #F4F4F0; --ink: #18181B; --muted: #5F5E58; --accent: #D7F25A; --line: #E4E3DC; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: var(--bg); color: var(--ink); padding: 24px;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+    font-size: 14px; line-height: 1.6;
+  }
+  .offline {
+    background: #fff; border: 1px solid var(--line); border-radius: 14px;
+    padding: 40px 36px; max-width: 420px; width: 100%; text-align: center;
+  }
+  .mark {
+    width: 48px; height: 48px; border-radius: 12px; background: var(--ink); color: var(--accent);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 18px; font-weight: 700; letter-spacing: -1px;
+  }
+  h1 { font-size: 20px; margin: 18px 0 6px; }
+  p { margin: 0 0 24px; color: var(--muted); }
+  a.btn {
+    display: inline-block; padding: 9px 20px; border-radius: 9px; background: var(--accent);
+    border: 1px solid var(--ink); color: var(--ink); font-weight: 700; text-decoration: none;
+  }
+</style>
+</head>
+<body>
+<main class="offline">
+  <span class="mark">&gt;_</span>
+  <h1>工作台没有响应</h1>
+  <p>请确认 Docker Desktop 正在运行，然后刷新。</p>
+  <a class="btn" href="/">刷新</a>
+</main>
+</body>
+</html>

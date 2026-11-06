@@ -1,0 +1,28 @@
+# 本机直改模式（用户 2026-11-04：别再「改云端 → 推 → 拉 → 重建」传话）。
+# 把仓库里的 src / public / scripts 只读挂进容器，node --watch 发现文件变了就自己重启，
+# 改完几秒就生效，不用重建镜像。数据仍在 workbench-data 卷里，不受影响。
+#
+# 打开一次（PowerShell，在仓库目录）：
+#   WB_VERSION=$(git rev-parse --short HEAD) docker compose -f docker-compose.yml -f docker-compose.live.yml up -d
+# 回到正常模式：
+#   docker compose up -d --build
+#
+# ⚠️ 本机实测（2026-11-04）：Docker Desktop 的 Windows bind mount **不传播 inotify 事件**，
+# 往宿主机 src/server.ts 追加内容、改 public 文件，容器里的 worker 进程都不会重启
+# （PID 一直不变，日志里也没有 Restarting）。所以「改完几秒就生效」这条在 Windows 上不成立。
+# 实际用法退化成：挂载让你**不必 build**，但每次要在宿主机上执行一次
+#   WB_VERSION=$(git rev-parse --short HEAD) docker compose -f docker-compose.yml -f docker-compose.live.yml up -d
+# （配置变了会 Recreate，1–3 秒，读的是最新挂载文件；`restart` 不会更新 WB_VERSION，版本号会滞后）。
+# 依赖变了（package.json / lock）仍然必须 `up -d --build`。Linux/macOS 上 watch 正常，不受此限。
+services:
+  workbench:
+    # 版本号原本是构建时烘进镜像的（Dockerfile ARG → ENV）。直改模式不重建镜像，
+    # 不在运行时覆盖的话，页面和备份文件名会一直显示上一次 build 的版本，看着像"没更新"。
+    # 启动时用 WB_VERSION=$(git rev-parse --short HEAD) 传进来即可（缺省仍是 dev）。
+    environment:
+      WB_VERSION: ${WB_VERSION:-dev}
+    volumes:
+      - ./src:/app/src:ro
+      - ./public:/app/public:ro
+      - ./scripts:/app/scripts:ro
+    command: ["node", "--disable-warning=ExperimentalWarning", "--watch-path=src", "--watch-path=public", "src/server.ts"]

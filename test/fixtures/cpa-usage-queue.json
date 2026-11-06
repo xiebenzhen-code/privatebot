@@ -1,0 +1,41 @@
+[
+  {
+    "timestamp": "2026-10-28T16:12:48.029526626+08:00",
+    "latency_ms": 3483,
+    "ttft_ms": 3132,
+    "source": "user@example.com",
+    "auth_index": "d29e70aa11bb22cc33dd44ee55ff1e75",
+    "access_token_sha256": "56cb3c0000000000000000000000a0b1",
+    "client_ip": "203.0.113.19",
+    "resolved_client_ip": "203.0.113.19",
+    "x_forwarded_for": "",
+    "user_agent": "curl/8.21.0",
+    "tokens": {
+      "input_tokens": 308, "output_tokens": 5, "reasoning_tokens": 0,
+      "cached_tokens": 0, "cache_read_tokens": 0, "cache_read_tokens_present": true,
+      "cache_creation_tokens": 0, "total_tokens": 313
+    },
+    "failed": false, "generate": true, "stream": false,
+    "fail": { "status_code": 200, "body": "" },
+    "response_headers": {
+      "Server": ["cloudflare"], "Set-Cookie": ["__cf_bm=REDACTED; path=/"],
+      "X-Codex-Active-Limit": ["premium"], "X-Codex-Plan-Type": ["plus"],
+      "X-Codex-Primary-Used-Percent": ["14"], "X-Codex-Primary-Window-Minutes": ["300"]
+    },
+    "accounting_version": 2,
+    "token_breakdown": {
+      "schema_version": 2, "quality": "complete", "total_tokens": 313,
+      "input": { "total_tokens": 308, "uncached_tokens": 308, "cache_read_tokens": 0, "cache_write_tokens": 0 },
+      "output": { "total_tokens": 5, "non_reasoning_tokens": 5, "reasoning_tokens": 0 },
+      "unclassified_tokens": 0
+    },
+    "provider": "codex", "executor_type": "CodexExecutor",
+    "model": "gpt-5.6-luna", "alias": "gpt-5.6-luna",
+    "endpoint": "POST /v1/chat/completions", "auth_type": "oauth",
+    "api_key": "sk-REDACTED", "is_native_key": true, "access_provider": "config-inline",
+    "request_id": "01a18100000000000000000000000547", "execution_id": "d025cc0000000000000000000000d8fb",
+    "trace_id": "01a18100000000000000000000000547", "session_id": "cbd2170000000000000000000000d39e",
+    "reasoning_effort": "medium", "service_tier": "auto",
+    "response_service_tier": "default", "response_model": "gpt-5.6-luna"
+  }
+]

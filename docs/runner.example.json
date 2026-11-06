@@ -1,0 +1,48 @@
+{
+  "_comment": "复制到 ~/.ai-workbench-runner.json，不要提交。017 起一个执行者可以按顺序配多个后端：代金券优先，官方余额兜底。",
+  "workbench": "http://localhost:3200",
+  "token": "与 .env 里的 WB_TOKEN 相同",
+  "projects": {
+    "ai-workbench": "C:/Users/you/ai-workbench"
+  },
+  "worktreeRoot": "C:/Users/you/wb-worktrees",
+  "_wait": "合并、推送各等多久审批（分钟），默认 120 / 30",
+  "mergeWaitMinutes": 120,
+  "pushWaitMinutes": 30,
+  "_brain": "042 调度大脑：不填就用下面 backends 里 model 以 bl- 开头那条（代金券）。想换模型就在 brain 里写清楚，密钥只在执行器这台机器上。",
+  "brain": { "baseUrl": "https://dashscope.aliyuncs.com/apps/anthropic", "token": "百炼的 key", "model": "deepseek-v4.1-flash" },
+  "executors": {
+    "pool": {
+      "tool": "claude",
+      "args": [
+        "-p",
+        "--output-format",
+        "stream-json",
+        "--verbose"
+      ],
+      "_backends": "按顺序排。派单建议是 bl- 开头的走 bailian，否则走 deepseek；bailian 报 401/403/429/额度不足时，同一个任务自动换 deepseek 重跑一次。不写 backends 就是 013 那样的单后端写法。",
+      "backends": [
+        {
+          "name": "bailian",
+          "model": "deepseek-v4.1-flash",
+          "_account": "直连不经过反代队列，跑完由执行器把 token 记到这个账号上；不填就不记账。",
+          "account": "百炼代金券",
+          "env": {
+            "ANTHROPIC_BASE_URL": "https://dashscope.aliyuncs.com/apps/anthropic",
+            "ANTHROPIC_AUTH_TOKEN": "百炼的 key，别写进仓库",
+            "ANTHROPIC_MODEL": "deepseek-v4.1-flash"
+          }
+        },
+        {
+          "name": "deepseek",
+          "model": "deepseek-chat",
+          "env": {
+            "ANTHROPIC_BASE_URL": "https://api.deepseek.com/anthropic",
+            "ANTHROPIC_AUTH_TOKEN": "DeepSeek 的 key，别写进仓库",
+            "ANTHROPIC_MODEL": "deepseek-chat"
+          }
+        }
+      ]
+    }
+  }
+}

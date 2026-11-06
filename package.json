@@ -1,0 +1,23 @@
+{
+  "name": "ai-workbench",
+  "version": "0.1.0",
+  "private": true,
+  "author": "谢本桢",
+  "description": "个人 AI 工作台：派发与审批 coding agent 任务、亲自处理的待办、用量与机器数据。零依赖，Node 22 内置 HTTP + SQLite。",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env src/server.ts",
+    "dev": "WB_NO_AUTH=1 WB_DB=./data/dev.db node --disable-warning=ExperimentalWarning --env-file-if-exists=.env --watch src/server.ts",
+    "seed": "node --disable-warning=ExperimentalWarning scripts/seed.ts",
+    "test": "node --disable-warning=ExperimentalWarning --test --test-concurrency=1 test/*.test.ts",
+    "setup": "node scripts/setup.mjs",
+    "postboot": "node scripts/postboot-check.mjs",
+    "export:trial": "node scripts/export-trial.mjs",
+    "diagnose": "node scripts/diagnose.mjs",
+    "sandbox:build": "node scripts/sandbox-build.mjs"
+  },
+  "license": "PolyForm-Noncommercial-1.0.0"
+}

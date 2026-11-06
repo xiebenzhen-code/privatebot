@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>任务卡</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+</style>
+</helmet>
+<button type="button" class="pb-card" onClick="{{t.open}}" style="width: 100%; box-sizing: border-box; text-align: left; display: flex; flex-direction: column; gap: 8px; padding: 11px 12px; border-radius: 12px; background: {{t.bg}}; border: 1px solid {{t.line}}; color: var(--ink, #18181B); font-family: -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; font-size: 13px; line-height: 1.45; cursor: pointer">
+<span style="font-weight: 600; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden">{{t.title}}</span>
+<div style="display: flex; align-items: center; gap: 6px; min-width: 0">
+<span style="width: 18px; height: 18px; border-radius: 9px; background: {{t.exColor}}; color: #FFFFFF; font-size: 9px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto">{{t.exMark}}</span>
+<span style="font-size: 12px; color: var(--ink2, #3F3F46); white-space: nowrap">{{t.exName}}</span>
+<span style="font-size: 11px; color: var(--muted, #62626B); font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{t.project}}</span>
+<div style="display: flex; gap: 3px" aria-label="进度：领取、编码、测试、合并、推送"><sc-for list="{{t.dots}}" as="d" hint-placeholder-count="5"><span style="width: 6px; height: 6px; border-radius: 3px; background: {{d.c}}"></span></sc-for></div>
+</div>
+<sc-if value="{{t.hasBar}}" hint-placeholder-val="{{ false }}"><span style="display: block; height: 3px; border-radius: 2px; background: var(--chip, #ECECE6); overflow: hidden"><span style="display: block; height: 3px; width: {{t.barW}}; background: {{t.exColor}}; transition: width .6s ease"></span></span></sc-if>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 6px"><span style="font-size: 12px; color: {{t.noteInk}}">{{t.note}}</span><span style="font-size: 11px; color: var(--muted, #62626B)">{{t.runsText}}</span></div>
+</button>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"t":{"editor":null,"default":{"title":"联网找 3 个同类开源项目，写成 docs/compare.md","project":"ai-workbench","exName":"反代池","exMark":"池","exColor":"#2563EB","runsText":"","dots":[{"c":"#18181B"},{"c":"#18181B"},{"c":"#D4D4CE"},{"c":"#D4D4CE"},{"c":"#D4D4CE"}],"hasBar":true,"barW":"55%","note":"已读 4 个网页","noteInk":"#62626B","bg":"#FFFFFF","line":"#E4E4DF"}},"$preview":{"width":320,"height":120}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const t = this.props.t || {};
+    return { t: { ...t, open: t.open || (() => {}) } };
+  }
+}
+</script>
+</body>
+</html>

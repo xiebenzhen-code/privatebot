@@ -1,0 +1,58 @@
+[
+  {
+    "harness": "claude-code",
+    "model": "claude-opus-4-6",
+    "category": "dev",
+    "level": "strong",
+    "evidence": [
+      {
+        "benchmark": "SWE-bench Verified",
+        "score": 0.808,
+        "source": "https://www-cdn.anthropic.com/14e4fb01875d2a69f646fa5e574dea2b1c0ff7b5.pdf",
+        "as_of": "2026-02",
+        "vendor_reported": true,
+        "note": "Anthropic 系统卡表 2.3.A、§2.4：最大推理强度，25 次平均为 80.84%，表中四舍五入为 80.8%。未确认该结果使用本工作台所用的 Claude Code 配置"
+      }
+    ]
+  },
+  {
+    "harness": "dsh",
+    "model": "deepseek-v4.1-flash",
+    "category": "dev",
+    "level": "medium",
+    "evidence": [
+      {
+        "benchmark": "DeepSWE v1.1",
+        "score": 0.742,
+        "source": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash#performance-across-agent-scaffolds-deepswe-v11-and-terminal-bench-21-max-reasoning-effort",
+        "as_of": "2026-09",
+        "vendor_reported": true,
+        "note": "原模型卡的 74.2% 属于 mini-SWE，不是 dsh；同表 DSH Minimal 为 72.6%、Standard 为 70.5%、PTC 为 67.6%。保留原先验值，不能把 74.2% 当成 dsh 实测"
+      },
+      {
+        "benchmark": "Terminal-Bench 2.1",
+        "score": 0.906,
+        "source": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash#performance-across-agent-scaffolds-deepswe-v11-and-terminal-bench-21-max-reasoning-effort",
+        "as_of": "2026-09",
+        "vendor_reported": true,
+        "note": "9 月原版模型卡，DSH Minimal、最大推理强度、Pass@1，测试环境禁网；Standard 和 PTC 均为 85.8%，不代表 dsh 的其它模式"
+      }
+    ]
+  },
+  {
+    "harness": "claude-code",
+    "model": "glm-4.6",
+    "category": "dev",
+    "level": "medium",
+    "evidence": [
+      {
+        "benchmark": "SWE-bench Verified",
+        "score": 0.682,
+        "source": "https://huggingface.co/zai-org/GLM-4.7",
+        "as_of": "2025-09",
+        "vendor_reported": false,
+        "note": "Z.ai 的 GLM-4.7 对照表给 GLM-4.6 报 68.0%；原 68.2% 是另一口径，未在厂商原页找到同值，也未证实对应 Claude Code。原先验值保留"
+      }
+    ]
+  }
+]

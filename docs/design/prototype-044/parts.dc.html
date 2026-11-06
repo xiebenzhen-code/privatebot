@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>组件表</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#3B5200}a:hover{color:#18181B}
+</style>
+</helmet>
+<div style="width: 1280px; height: 1180px; box-sizing: border-box; padding: 40px; background: #F4F4F0; color: #18181B; font-family: -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; font-size: 13px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; align-items: start">
+
+<section style="display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; color: #6B6B73; letter-spacing: 0.08em">第 1 层</span><span style="font-size: 22px; font-weight: 700">原子</span><span style="font-size: 12px; color: #6B6B73">最小的零件，全站只有这一份</span></div>
+
+<div style="background: #FFFFFF; border: 1px solid #E4E4DF; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 12px; color: #6B6B73">状态点：颜色 + 文字，不只靠颜色</span>
+<div style="display: flex; flex-wrap: wrap; gap: 12px">
+<span style="display: inline-flex; align-items: center; gap: 5px"><span style="width: 8px; height: 8px; border-radius: 4px; background: #8A8A92"></span>排队</span>
+<span style="display: inline-flex; align-items: center; gap: 5px"><span style="width: 8px; height: 8px; border-radius: 4px; background: #2563EB"></span>在跑</span>
+<span style="display: inline-flex; align-items: center; gap: 5px"><span style="width: 8px; height: 8px; border-radius: 4px; background: #9A3412"></span>等你</span>
+<span style="display: inline-flex; align-items: center; gap: 5px"><span style="width: 8px; height: 8px; border-radius: 4px; background: #15803D"></span>完成</span>
+<span style="display: inline-flex; align-items: center; gap: 5px"><span style="width: 8px; height: 8px; border-radius: 4px; background: #B91C1C"></span>被拦住</span>
+</div>
+</div>
+
+<div style="background: #FFFFFF; border: 1px solid #E4E4DF; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 12px; color: #6B6B73">执行者头像：一种颜色一个人</span>
+<div style="display: flex; gap: 8px">
+<span style="width: 28px; height: 28px; border-radius: 14px; background: #2563EB; color: #FFFFFF; font-weight: 700; font-size: 12px; display: inline-flex; align-items: center; justify-content: center">池</span>
+<span style="width: 28px; height: 28px; border-radius: 14px; background: #C2410C; color: #FFFFFF; font-weight: 700; font-size: 12px; display: inline-flex; align-items: center; justify-content: center">C</span>
+<span style="width: 28px; height: 28px; border-radius: 14px; background: #18181B; color: #FFFFFF; font-weight: 700; font-size: 11px; display: inline-flex; align-items: center; justify-content: center">Cx</span>
+<span style="width: 28px; height: 28px; border-radius: 14px; background: #B45309; color: #FFFFFF; font-weight: 700; font-size: 12px; display: inline-flex; align-items: center; justify-content: center">W</span>
+<span style="width: 28px; height: 28px; border-radius: 14px; background: #0F766E; color: #FFFFFF; font-weight: 700; font-size: 12px; display: inline-flex; align-items: center; justify-content: center">d</span>
+</div>
+</div>
+
+<div style="background: #FFFFFF; border: 1px solid #E4E4DF; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 12px; color: #6B6B73">阶段点：领取 · 编码 · 测试 · 合并 · 推送</span>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; align-items: center; gap: 10px"><div style="display: flex; gap: 3px"><span style="width: 8px; height: 8px; border-radius: 4px; background: #18181B"></span><span style="width: 8px; height: 8px; border-radius: 4px; background: #18181B"></span><span style="width: 8px; height: 8px; border-radius: 4px; background: #E4E4DF"></span><span style="width: 8px; height: 8px; border-radius: 4px; background: #E4E4DF"></span><span style="width: 8px; height: 8px; border-radius: 4px; background: #E4E4DF"></span></div><span style="font-size: 12px; color: #3F3F46">编码完，测试中</span></div>
+<div style="display: flex; align-items: center; gap: 10px"><div style="display: flex; gap: 3px"><span style="width: 8px; height: 8px; border-radius: 4px; background: #18181B"></span><span style="width: 8px; height: 8px; border-radius: 4px; background: #B91C1C"></span><span style="width: 8px; height: 8px; border-radius: 4px; background: #E4E4DF"></span><span style="width: 8px; height: 8px; border-radius: 4px; background: #E4E4DF"></span><span style="width: 8px; height: 8px; border-radius: 4px; background: #E4E4DF"></span></div><span style="font-size: 12px; color: #3F3F46">编码这一步被拦住</span></div>
+</div>
+</div>
+
+<div style="background: #FFFFFF; border: 1px solid #E4E4DF; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 12px; color: #6B6B73">额度环 / 额度条：剩多少，一眼看</span>
+<div style="display: flex; align-items: center; gap: 16px">
+<svg width="40" height="40" viewBox="0 0 36 36" role="img" aria-label="剩 60%"><circle cx="18" cy="18" r="14" fill="none" stroke="#ECECE6" stroke-width="4"></circle><circle cx="18" cy="18" r="14" fill="none" stroke="#C2410C" stroke-width="4" stroke-linecap="round" stroke-dasharray="52.8 88" transform="rotate(-90 18 18)"></circle></svg>
+<svg width="40" height="40" viewBox="0 0 36 36" role="img" aria-label="剩 15%，偏低"><circle cx="18" cy="18" r="14" fill="none" stroke="#ECECE6" stroke-width="4"></circle><circle cx="18" cy="18" r="14" fill="none" stroke="#B91C1C" stroke-width="4" stroke-linecap="round" stroke-dasharray="13.2 88" transform="rotate(-90 18 18)"></circle></svg>
+<span style="flex: 1; height: 6px; border-radius: 3px; background: #ECECE6; overflow: hidden"><span style="display: block; height: 6px; width: 62%; background: #2563EB"></span></span>
+</div>
+</div>
+
+<div style="background: #FFFFFF; border: 1px solid #E4E4DF; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 12px; color: #6B6B73">能力标签：能干什么、为什么不能</span>
+<div style="display: flex; flex-wrap: wrap; gap: 6px">
+<span style="height: 20px; padding: 0 7px; border-radius: 10px; background: #F0FDF4; color: #15803D; font-size: 11px; display: inline-flex; align-items: center">改代码</span>
+<span style="height: 20px; padding: 0 7px; border-radius: 10px; background: #F0FDF4; color: #15803D; font-size: 11px; display: inline-flex; align-items: center">联网</span>
+<span style="height: 20px; padding: 0 7px; border-radius: 10px; background: #FFF6EE; color: #9A3412; font-size: 11px; display: inline-flex; align-items: center">只读</span>
+<span style="height: 20px; padding: 0 7px; border-radius: 10px; background: #FFF6EE; color: #9A3412; font-size: 11px; display: inline-flex; align-items: center">待登录</span>
+<span style="height: 20px; padding: 0 7px; border-radius: 10px; background: #F4F4F0; color: #3F3F46; font-size: 11px; display: inline-flex; align-items: center">你手动贴</span>
+</div>
+</div>
+
+<div style="background: #FFFFFF; border: 1px solid #E4E4DF; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 12px; color: #6B6B73">按钮：一屏一个荧光</span>
+<div style="display: flex; gap: 8px">
+<button type="button" style="height: 34px; padding: 0 16px; border: 0; border-radius: 9px; background: #D7F25A; color: #18181B; font: inherit; font-weight: 700">派出去</button>
+<button type="button" style="height: 34px; padding: 0 14px; border: 0; border-radius: 9px; background: #18181B; color: #FFFFFF; font: inherit; font-weight: 600">批准</button>
+<button type="button" style="height: 34px; padding: 0 12px; border: 1px solid #D4D4CE; border-radius: 9px; background: #FFFFFF; color: #18181B; font: inherit">驳回</button>
+</div>
+</div>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; color: #6B6B73; letter-spacing: 0.08em">第 2 层</span><span style="font-size: 22px; font-weight: 700">分子</span><span style="font-size: 12px; color: #6B6B73">原子拼成的卡片，在哪一页都长一样</span></div>
+
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; color: #6B6B73">任务卡 = 标题 + 头像 + 阶段点 + 进度条 + 一句现状</span>
+<div style="display: flex; flex-direction: column; gap: 8px; padding: 11px 12px; border-radius: 12px; background: #FFFFFF; border: 1px solid #E4E4DF">
+<span style="font-weight: 600">联网找 3 个同类产品，整理成一页对比</span>
+<div style="display: flex; align-items: center; gap: 6px">
+<span style="width: 18px; height: 18px; border-radius: 9px; background: #2563EB; color: #FFFFFF; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center">池</span>
+<span style="font-size: 12px; color: #3F3F46; flex: 1">反代池</span>
+<div style="display: flex; gap: 3px"><span style="width: 6px; height: 6px; border-radius: 3px; background: #18181B"></span><span style="width: 6px; height: 6px; border-radius: 3px; background: #18181B"></span><span style="width: 6px; height: 6px; border-radius: 3px; background: #E4E4DF"></span><span style="width: 6px; height: 6px; border-radius: 3px; background: #E4E4DF"></span><span style="width: 6px; height: 6px; border-radius: 3px; background: #E4E4DF"></span></div>
+</div>
+<span style="display: block; height: 3px; border-radius: 2px; background: #ECECE6; overflow: hidden"><span style="display: block; height: 3px; width: 55%; background: #2563EB"></span></span>
+<span style="font-size: 12px; color: #6B6B73">已读 4 个网页</span>
+</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; color: #6B6B73">执行者卡 = 头像 + 状态点 + 额度环 + 能力标签</span>
+<div style="display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 12px; background: #FFFFFF; border: 1px solid #E4E4DF">
+<div style="display: flex; align-items: center; gap: 10px">
+<span style="width: 32px; height: 32px; border-radius: 16px; background: #C2410C; color: #FFFFFF; font-weight: 700; display: inline-flex; align-items: center; justify-content: center">C</span>
+<div style="flex: 1; display: flex; flex-direction: column"><span style="font-weight: 700">Claude</span><span style="font-size: 12px; color: #3F3F46; display: inline-flex; align-items: center; gap: 5px"><span style="width: 6px; height: 6px; border-radius: 3px; background: #15803D"></span>在线</span></div>
+<svg width="36" height="36" viewBox="0 0 36 36" role="img" aria-label="剩 60%"><circle cx="18" cy="18" r="14" fill="none" stroke="#ECECE6" stroke-width="4"></circle><circle cx="18" cy="18" r="14" fill="none" stroke="#C2410C" stroke-width="4" stroke-linecap="round" stroke-dasharray="52.8 88" transform="rotate(-90 18 18)"></circle></svg>
+</div>
+<div style="display: flex; gap: 4px"><span style="height: 20px; padding: 0 7px; border-radius: 10px; background: #F0FDF4; color: #15803D; font-size: 11px; display: inline-flex; align-items: center">改代码</span><span style="height: 20px; padding: 0 7px; border-radius: 10px; background: #F0FDF4; color: #15803D; font-size: 11px; display: inline-flex; align-items: center">联网</span></div>
+<div style="display: flex; justify-content: space-between; font-size: 12px; color: #3F3F46"><span>在跑 1 · 排队 0</span><span>60%</span></div>
+</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; color: #6B6B73">审批卡 = 风险圈 + 一句话 + 两个按钮</span>
+<div style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; background: #FFFFFF; border: 1px solid #FED7AA">
+<span style="width: 30px; height: 30px; border-radius: 15px; background: #FEE2E2; color: #B91C1C; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700">高</span>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-weight: 600">T-34 想运行 npm install</span><span style="font-size: 12px; color: #6B6B73">反代池 · 会联网下载</span></div>
+<button type="button" style="height: 32px; padding: 0 14px; border-radius: 8px; border: 0; background: #18181B; color: #FFFFFF; font: inherit; font-weight: 600">批准</button>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; background: #F0FDF4; border: 1px solid #BBF7D0">
+<span style="width: 30px; height: 30px; border-radius: 15px; background: #DCFCE7; color: #15803D; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700">✓</span>
+<span style="flex: 1; font-weight: 600">点完：变绿、写清批了什么、0.9 秒后收起</span>
+</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; color: #6B6B73">数据格 = 标签 + 大数字 + 小图（不写长句）</span>
+<div style="background: #FFFFFF; border: 1px solid #E4E4DF; border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; color: #6B6B73">今日 Token</span>
+<div style="display: flex; align-items: flex-end; justify-content: space-between"><span style="font-size: 22px; font-weight: 700; font-family: ui-monospace, Consolas, monospace">1.2M</span>
+<svg width="84" height="28" viewBox="0 0 84 28" aria-hidden="true"><polyline points="0,13.6 6.4,12.4 12.8,18.8 19.2,14.4 25.6,10 32,7.6 38.4,2.4 44.8,21.2 51.2,25.2 57.6,23.6 64,20 70.4,23.2 76.8,22 83.2,21.2" fill="none" stroke="#18181B" stroke-width="1.6"></polyline></svg></div>
+</div>
+</div>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; color: #6B6B73; letter-spacing: 0.08em">第 3 层</span><span style="font-size: 22px; font-weight: 700">组织</span><span style="font-size: 12px; color: #6B6B73">卡片排成区块，区块之间有关系</span></div>
+
+<div style="background: #FFFFFF; border: 1px solid #E4E4DF; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+<span style="font-weight: 700">任务流</span>
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px">
+<div style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 11px; color: #6B6B73">排队</span><span style="height: 26px; border-radius: 6px; background: #F4F4F0; border: 1px solid #E4E4DF"></span><span style="height: 26px; border-radius: 6px; background: #F4F4F0; border: 1px solid #E4E4DF"></span></div>
+<div style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 11px; color: #6B6B73">在跑</span><span style="height: 26px; border-radius: 6px; background: #EFF6FF; border: 1px solid #BFDBFE"></span><span style="height: 26px; border-radius: 6px; background: #EFF6FF; border: 1px solid #BFDBFE"></span></div>
+<div style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 11px; color: #6B6B73">等你</span><span style="height: 26px; border-radius: 6px; background: #FFF6EE; border: 1px solid #FED7AA"></span></div>
+<div style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 11px; color: #6B6B73">完成</span><span style="height: 26px; border-radius: 6px; background: #F0FDF4; border: 1px solid #BBF7D0"></span></div>
+</div>
+<span style="font-size: 12px; color: #6B6B73">由任务卡组成。点任一张 → 右侧滑出详情，页面不跳。</span>
+</div>
+
+<div style="background: #FFFFFF; border: 1px solid #E4E4DF; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+<span style="font-weight: 700">剧组</span>
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px">
+<span style="height: 34px; border-radius: 8px; border: 2px solid #18181B"></span><span style="height: 34px; border-radius: 8px; border: 1px solid #E4E4DF"></span><span style="height: 34px; border-radius: 8px; border: 1px solid #E4E4DF"></span><span style="height: 34px; border-radius: 8px; border: 1px solid #E4E4DF"></span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; padding: 8px; border-radius: 8px; border: 1px solid #18181B">
+<div style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 11px; color: #6B6B73">管理块</span><span style="height: 6px; border-radius: 3px; background: #2563EB; width: 70%"></span><span style="height: 6px; border-radius: 3px; background: #B91C1C; width: 20%"></span></div>
+<div style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 11px; color: #6B6B73">任务块</span><span style="height: 14px; border-radius: 4px; background: #F4F4F0"></span><span style="height: 14px; border-radius: 4px; background: #F4F4F0"></span></div>
+</div>
+<span style="font-size: 12px; color: #6B6B73">由执行者卡组成。点开就地展开管理块 + 任务块；任务块里还是同一张任务卡。</span>
+</div>
+
+<div style="background: #FFFFFF; border: 1px solid #E4E4DF; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+<span style="font-weight: 700">详情面板</span>
+<div style="display: flex; flex-direction: column; gap: 0">
+<div style="display: flex; gap: 8px; align-items: center"><span style="width: 12px; height: 12px; border-radius: 6px; background: #18181B"></span><span style="font-size: 12px">领取</span></div>
+<span style="width: 2px; height: 10px; background: #ECECE6; margin-left: 5px"></span>
+<div style="display: flex; gap: 8px; align-items: center"><span style="width: 12px; height: 12px; border-radius: 6px; background: #18181B"></span><span style="font-size: 12px">读网页 ×4</span></div>
+<span style="width: 2px; height: 10px; background: #ECECE6; margin-left: 5px"></span>
+<div style="display: flex; gap: 8px; align-items: center"><span style="width: 12px; height: 12px; border-radius: 6px; border: 2px solid #2563EB; box-sizing: border-box"></span><span style="font-size: 12px">写文件（进行中）</span></div>
+</div>
+<span style="font-size: 12px; color: #6B6B73">过程画成时间线，不贴日志。结果、备忘、审计都在这一个面板里。</span>
+</div>
+
+<div style="background: #18181B; color: #FFFFFF; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 6px">
+<span style="font-weight: 700">三条规矩</span>
+<span style="font-size: 12px; color: #E4E4DF">1. 同一个东西只有一种长相。</span>
+<span style="font-size: 12px; color: #E4E4DF">2. 点任何东西都不跳页：面板滑出或就地展开。</span>
+<span style="font-size: 12px; color: #E4E4DF">3. 能画成图的不写成句子。</span>
+</div>
+</section>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1180}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

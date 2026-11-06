@@ -1,0 +1,39 @@
+{
+  "_comment": "复制到 ~/.ai-workbench-readers.json 后按 probe 的结果改。真实配置不要提交。",
+  "sites": [
+    {
+      "name": "workbuddy",
+      "account": "WorkBuddy",
+      "executor": "workbuddy",
+      "loginUrl": "https://www.codebuddy.cn/login",
+      "usageUrl": "https://www.codebuddy.cn/profile/usage",
+      "extract": {
+        "type": "network",
+        "urlIncludes": "/api/",
+        "balancePath": "data.credits.balance",
+        "expiresPath": "data.credits.expiresAt"
+      },
+      "fallback": {
+        "type": "text",
+        "regex": "积分余额[:：]?\\s*([\\d,]+(?:\\.\\d+)?)"
+      }
+    },
+    {
+      "name": "autoclaw",
+      "account": "AutoClaw",
+      "executor": "autoclaw",
+      "loginUrl": "https://www.autoclaw.ai/login",
+      "usageUrl": "https://www.autoclaw.ai/usage",
+      "extract": {
+        "type": "network",
+        "urlIncludes": "/api/",
+        "balancePath": "data.balance",
+        "expiresPath": "data.expiresAt"
+      },
+      "fallback": {
+        "type": "text",
+        "regex": "剩余积分[:：]?\\s*([\\d,]+)"
+      }
+    }
+  ]
+}

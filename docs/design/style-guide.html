@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>样式说明 · 一个色系</title>
+<!-- 零依赖：直接读线上那份 CSS，改样式先看这里。页面里没有任何真实数据。 -->
+<link rel="stylesheet" href="../../public/style.css">
+<style>
+  /* 只给说明页排版用，不参与线上页面。 */
+  .sg { max-width: 880px; margin: 0 auto; padding: var(--s8) var(--s6) 72px; display: flex; flex-direction: column; gap: var(--s8); }
+  .sg-row { display: flex; flex-wrap: wrap; gap: var(--s3); align-items: center; }
+  .sg-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--s3); }
+  .sg-swatch { border: 1px solid var(--line); border-radius: var(--r-inner); overflow: hidden; background: var(--panel); }
+  .sg-swatch .cap { display: block; width: 100%; height: 56px; }
+  .sg-swatch .meta { padding: var(--s2) var(--s3); display: flex; flex-direction: column; gap: 2px; }
+  .sg-swatch code { background: none; padding: 0; }
+  .sg-note { color: var(--muted); font-size: 13px; margin: 0; }
+  .sg-demo { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-card); padding: var(--s5); display: flex; flex-direction: column; gap: var(--s3); }
+</style>
+</head>
+<body>
+<main class="sg">
+
+  <header>
+    <span class="eyebrow">DESIGN · STYLE GUIDE</span>
+    <h1 style="font-size:28px;font-weight:700;margin-top:var(--s1)">一个色系，重要的事一眼能看到</h1>
+    <p class="lede">暖灰纸底 + 墨色 + 荧光黄绿。其他颜色只表示状态，不拿来装饰。</p>
+  </header>
+
+  <section class="sg-demo">
+    <h2 class="section-title">色板</h2>
+    <div class="sg-swatches">
+      <div class="sg-swatch"><span class="cap" style="background:var(--bg)"></span><span class="meta"><strong>纸底</strong><code>--bg #F4F4F0</code></span></div>
+      <div class="sg-swatch"><span class="cap" style="background:var(--panel);border-bottom:1px solid var(--line)"></span><span class="meta"><strong>卡片</strong><code>--panel #FFFFFF</code></span></div>
+      <div class="sg-swatch"><span class="cap" style="background:var(--ink)"></span><span class="meta"><strong>墨色</strong><code>--ink #18181B</code></span></div>
+      <div class="sg-swatch"><span class="cap" style="background:var(--accent)"></span><span class="meta"><strong>荧光黄绿（只做填充）</strong><code>--accent #D7F25A</code></span></div>
+      <div class="sg-swatch"><span class="cap" style="background:var(--accent-soft)"></span><span class="meta"><strong>荧光底</strong><code>--accent-soft #EEF8C4</code></span></div>
+      <div class="sg-swatch"><span class="cap" style="background:var(--accent-ink)"></span><span class="meta"><strong>深橄榄（彩色字用这支）</strong><code>--accent-ink #3B5200</code></span></div>
+      <div class="sg-swatch"><span class="cap" style="background:var(--warn)"></span><span class="meta"><strong>注意</strong><code>--warn #9A3412</code></span></div>
+      <div class="sg-swatch"><span class="cap" style="background:var(--danger)"></span><span class="meta"><strong>危险</strong><code>--danger #B91C1C</code></span></div>
+      <div class="sg-swatch"><span class="cap" style="background:var(--ok)"></span><span class="meta"><strong>成功</strong><code>--ok #166534</code></span></div>
+      <div class="sg-swatch"><span class="cap" style="background:var(--info)"></span><span class="meta"><strong>进行中</strong><code>--info #1D4ED8</code></span></div>
+    </div>
+    <p class="sg-note">荧光黄绿在白底上的对比度只有 1.25:1，<strong>永远不要拿它当文字色</strong>；要彩色的字就用 <code>--accent-ink</code>（白底 8.8:1）。</p>
+  </section>
+
+  <section class="sg-demo">
+    <h2 class="section-title">标题层级</h2>
+    <div>
+      <span class="eyebrow">TODAY · 2026-10-30</span>
+      <h1>页面大标题</h1>
+      <p class="lede">页面标题下面这一句是 lede：说清这页在讲什么。</p>
+    </div>
+    <div class="panel-head"><h2>区块标题<span class="count warn">3</span></h2><a href="#">右侧的出口</a></div>
+    <p class="sg-note">区块标题前面那根 4×14px 的荧光标记条是公共样式（<code>.panel-head h2</code> / <code>.section-title</code>），不用手写。</p>
+    <div class="sg-row">
+      <span class="subhead"><span class="dot" style="background:var(--accent-ink)"></span>小标题</span>
+      <span class="label-req">必填</span>
+      <span class="label-opt">可选</span>
+    </div>
+    <p class="hint">普通提示用这一档灰：不抢戏，但读得到。</p>
+  </section>
+
+  <section class="sg-demo">
+    <h2 class="section-title">按钮</h2>
+    <div class="sg-row">
+      <button class="btn accent">推荐（开始 · 批准 · 立即备份）</button>
+      <button class="btn primary">主要（新建 · 创建 · 保存）</button>
+      <button class="btn">次要（取消 · 编辑）</button>
+      <button class="btn danger">危险（终止 · 删除）</button>
+      <a href="#">文字链接</a>
+      <button class="btn" disabled>禁用</button>
+    </div>
+    <p class="sg-note">同一屏里荧光黄绿的按钮最多一个——满屏都亮，就没有亮的了。</p>
+  </section>
+
+  <section class="sg-demo">
+    <h2 class="section-title">状态标签</h2>
+    <p class="sg-note">每个状态都是「圆点 + 文字 + 浅底」，三样齐全：颜色看不清时，字还在。</p>
+    <div class="sg-row">
+      <span class="status queued"><span class="dot"></span>排队</span>
+      <span class="status running"><span class="dot"></span>运行中</span>
+      <span class="status review"><span class="dot"></span>等你批准</span>
+      <span class="status done"><span class="dot"></span>已完成</span>
+      <span class="status failed"><span class="dot"></span>失败</span>
+      <span class="status offline"><span class="dot"></span>离线</span>
+    </div>
+  </section>
+
+  <section class="sg-demo">
+    <h2 class="section-title">提示块</h2>
+    <div class="callout info"><span>要人读一句的说明。关键词用荧光笔：<span class="mark">「在线」</span>的才会真的开跑。</span></div>
+    <div class="callout warn"><strong>会出问题的</strong><span>现在没有执行器在线，派给 Agent 的任务会一直停在排队。</span></div>
+    <div class="callout danger"><strong>不可恢复的</strong><span>删除后审批记录会保留，但任务本身回不来。</span></div>
+    <div class="callout ok"><strong>做成了</strong><span>备份已写入，最近一次成功是刚刚。</span></div>
+  </section>
+
+  <section class="sg-demo">
+    <h2 class="section-title">表单与分组</h2>
+    <div class="form">
+      <div class="form-group">
+        <span class="subhead">① 做什么</span>
+        <label class="field"><span>标题<span class="label-req">必填</span></span><input value="给 RSS 抓取加去重与重试"></label>
+        <label class="field"><span>说明<span class="label-opt">可选</span></span><textarea rows="3">背景、验收标准、注意事项</textarea></label>
+      </div>
+      <div class="form-group">
+        <span class="subhead">② 谁来做</span>
+        <div class="field-row">
+          <label class="field"><span>执行者<span class="label-req">必填</span></span><select><option>反代池（在线）</option></select></label>
+          <label class="field"><span>分类</span><select><option>开发</option></select></label>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sg-demo">
+    <h2 class="section-title">筛选</h2>
+    <div class="filters">
+      <div class="filter-row"><span class="filter-label"><span class="dot" style="background:var(--accent-ink)"></span>执行者</span>
+        <a class="pill on" href="#">全部</a>
+        <a class="pill" href="#"><span class="dot" style="background:#2563EB"></span>反代池</a>
+      </div>
+      <div class="filter-row"><span class="filter-label"><span class="dot" style="background:var(--info)"></span>分类</span>
+        <a class="pill on" href="#">全部</a>
+        <a class="pill" href="#">开发</a>
+      </div>
+    </div>
+    <p class="sg-note">选中的标签前面有个 ✓，不只靠底色。</p>
+  </section>
+
+</main>
+</body>
+</html>

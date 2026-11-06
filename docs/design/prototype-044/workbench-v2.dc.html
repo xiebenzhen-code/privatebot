@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>PrivateBot 第二版</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#3B5200}a:hover{color:#18181B}
+button{font:inherit;cursor:pointer;color:inherit}
+input{font:inherit;color:inherit}
+.pb{--bg:#F4F4F0;--panel:#FFFFFF;--sunk:#FAFAF7;--chip:#ECECE6;--line:#E4E4DF;--line2:#D4D4CE;--ink:#18181B;--ink2:#3F3F46;--muted:#62626B;--faint:#8A8A92;--accent:#D7F25A;--accentInk:#18181B;--solid:#18181B;--solidInk:#FFFFFF;--run:#2563EB;--runBg:#EFF6FF;--warn:#9A3412;--warnBg:#FFF6EE;--warnLine:#FED7AA;--bad:#B91C1C;--badBg:#FEF2F2;--badLine:#FECACA;--ok:#15803D;--okBg:#F0FDF4;--okLine:#BBF7D0;--shadow:0 6px 18px rgba(24,24,27,.08);--scrim:rgba(24,24,27,.18)}
+.pb[data-theme="dark"]{--bg:#0F0F11;--panel:#18181B;--sunk:#141416;--chip:#26262B;--line:#2A2A30;--line2:#3A3A42;--ink:#F4F4F0;--ink2:#D4D4D8;--muted:#A1A1AA;--faint:#8A8A94;--accent:#D7F25A;--accentInk:#18181B;--solid:#F4F4F0;--solidInk:#18181B;--run:#60A5FA;--runBg:#16233A;--warn:#FDBA74;--warnBg:#2A1A0E;--warnLine:#5A3412;--bad:#F87171;--badBg:#2A1213;--badLine:#5B1D1D;--ok:#4ADE80;--okBg:#0F2416;--okLine:#1E4D2E;--shadow:0 8px 22px rgba(0,0,0,.45);--scrim:rgba(0,0,0,.5)}
+.pb{transition:background-color .45s ease,color .45s ease}
+.pb *{transition-property:background-color,border-color,color;transition-duration:.45s;transition-timing-function:ease}
+@keyframes pbIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes pbGrow{from{opacity:0;transform:scaleY(.96)}to{opacity:1;transform:none}}
+.pb-view{animation:pbIn .32s cubic-bezier(.2,.8,.2,1)}
+.pb-open{animation:pbGrow .3s cubic-bezier(.2,.8,.2,1);transform-origin:top}
+.pb-card{transition:transform .18s ease,box-shadow .18s ease,background-color .45s ease,border-color .3s ease,opacity .35s ease}
+.pb-card:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+.pb-card:active{transform:translateY(0) scale(.99)}
+.pb-nav:hover{background:var(--chip)}
+.sm{transition:transform .6s cubic-bezier(.45,0,.2,1)}
+.sm-core{transition:r .6s cubic-bezier(.45,0,.2,1)}
+.sm-bite{transition:transform .6s cubic-bezier(.45,0,.2,1);transform:translate(9px,-9px)}
+.sm-rays{transform-origin:12px 12px;transition:transform .5s cubic-bezier(.45,0,.2,1),opacity .35s ease}
+.pb[data-theme="dark"] .sm{transform:rotate(-30deg)}
+.pb[data-theme="dark"] .sm-core{r:8px}
+.pb[data-theme="dark"] .sm-bite{transform:translate(0,0)}
+.pb[data-theme="dark"] .sm-rays{transform:rotate(-60deg) scale(.2);opacity:0}
+@media (prefers-reduced-motion: reduce){.pb-view,.pb-open{animation:none}.pb-card,.sm,.sm-core,.sm-bite,.sm-rays{transition:none}.pb-card:hover{transform:none}}
+</style>
+</helmet>
+<div class="pb" data-theme="{{theme}}" style="min-height: 100vh; display: flex; background: var(--bg); color: var(--ink); font-family: -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; font-size: 13px; line-height: 1.45">
+
+<nav aria-label="主导航" style="width: {{railW}}; flex: 0 0 auto; background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; padding: 12px 10px; box-sizing: border-box; overflow: hidden">
+<button type="button" class="pb-nav" onClick="{{toggleRail}}" aria-label="{{railLabel}}" style="height: 38px; display: flex; align-items: center; gap: 10px; padding: 0 9px; border: 0; border-radius: 9px; background: transparent">
+<span style="width: 22px; height: 22px; border-radius: 7px; background: var(--solid); color: var(--accent); font-weight: 800; font-size: 12px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto">P</span>
+<sc-if value="{{railOpen}}" hint-placeholder-val="{{ true }}"><span style="font-weight: 700; font-size: 14px; white-space: nowrap; flex: 1; text-align: left">PrivateBot</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></sc-if>
+</button>
+<div style="height: 10px"></div>
+<sc-for list="{{nav}}" as="n" hint-placeholder-count="4">
+<button type="button" class="pb-nav" onClick="{{n.pick}}" aria-label="{{n.label}}" aria-current="{{n.current}}" style="height: 40px; display: flex; align-items: center; gap: 10px; padding: 0 10px; border: 0; border-radius: 9px; background: {{n.bg}}; color: {{n.fg}}; font-weight: {{n.weight}}; white-space: nowrap">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{n.icon}}"></path></svg>
+<sc-if value="{{railOpen}}" hint-placeholder-val="{{ true }}"><span style="flex: 1; text-align: left">{{n.label}}</span><sc-if value="{{n.hasBadge}}" hint-placeholder-val="{{ false }}"><span style="min-width: 18px; height: 18px; border-radius: 9px; background: var(--warn); color: var(--panel); font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; padding: 0 5px">{{n.badge}}</span></sc-if></sc-if>
+</button>
+</sc-for>
+<div style="flex: 1"></div>
+<button type="button" class="pb-nav" onClick="{{goSettings}}" aria-label="设置" style="height: 40px; display: flex; align-items: center; gap: 10px; padding: 0 10px; border: 0; border-radius: 9px; background: {{setBg}}; white-space: nowrap">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg>
+<sc-if value="{{railOpen}}" hint-placeholder-val="{{ true }}"><span>设置</span></sc-if>
+</button>
+<div style="display: flex; align-items: center; gap: 8px; padding: 9px 10px; border-radius: 9px; background: var(--sunk); white-space: nowrap">
+<span style="width: 8px; height: 8px; border-radius: 4px; background: var(--ok); flex: 0 0 auto"></span>
+<sc-if value="{{railOpen}}" hint-placeholder-val="{{ true }}"><span style="font-size: 12px; color: var(--ink2)">执行器在线 · 编码 {{codingNow}}/3</span></sc-if>
+</div>
+</nav>
+
+<main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+<header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 22px; border-bottom: 1px solid var(--line); background: var(--panel)">
+<div style="display: flex; flex-direction: column; min-width: 150px">
+<span style="font-size: 16px; font-weight: 700">{{viewTitle}}</span>
+<span style="font-size: 12px; color: var(--muted)">{{viewSub}}</span>
+</div>
+<form onSubmit="{{send}}" style="flex: 1 1 480px; min-width: 0; display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 6px 0 14px; border: 1px solid var(--line2); border-radius: 12px; background: var(--sunk)">
+<label for="pb2-ask" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">让 AI 做什么</label>
+<input id="pb2-ask" value="{{draft}}" onChange="{{onType}}" placeholder="让 AI 做什么？例：联网找 3 个同类开源项目，写成 docs/compare.md" style="flex: 1; min-width: 0; border: 0; background: transparent; outline: none; font-size: 14px">
+<button type="button" onClick="{{cycleProject}}" style="height: 28px; padding: 0 10px; border-radius: 14px; border: 0; background: var(--chip); font-size: 12px; white-space: nowrap">项目 · {{draftProject}}</button>
+<button type="button" onClick="{{toggleAnswer}}" aria-pressed="{{answerPressed}}" style="height: 28px; padding: 0 10px; border-radius: 14px; border: 1px solid {{answerLine}}; background: {{answerBg}}; color: {{answerFg}}; font-size: 12px; white-space: nowrap">只要回答</button>
+<button type="submit" style="height: 34px; padding: 0 16px; border: 0; border-radius: 9px; background: var(--accent); color: var(--accentInk); font-weight: 700; white-space: nowrap">派出去</button>
+</form>
+<button type="button" onClick="{{toggleTheme}}" aria-label="{{themeLabel}}" aria-pressed="{{themePressed}}" style="position: relative; width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line); background: var(--sunk); display: inline-flex; align-items: center; justify-content: center">
+<svg class="sm" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+<mask id="pb2-moon"><rect x="0" y="0" width="24" height="24" fill="white"></rect><circle class="sm-bite" cx="17" cy="7" r="6.5" fill="black"></circle></mask>
+<circle class="sm-core" cx="12" cy="12" r="5" fill="currentColor" mask="url(#pb2-moon)"></circle>
+<g class="sm-rays" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 1.5v2.2M12 20.3v2.2M1.5 12h2.2M20.3 12h2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"></path></g>
+</svg>
+</button>
+</header>
+
+<div style="padding: 18px 22px 40px; display: flex; flex-direction: column; gap: 16px">
+
+<sc-if value="{{isHome}}" hint-placeholder-val="{{ true }}">
+<div class="pb-view" style="display: flex; flex-direction: column; gap: 16px">
+<section aria-label="此刻" style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px">
+<sc-for list="{{tiles}}" as="k" hint-placeholder-count="5">
+<button type="button" class="pb-card" onClick="{{k.go}}" style="text-align: left; background: {{k.bg}}; border: 1px solid {{k.line}}; border-radius: 12px; padding: 11px 13px; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; color: var(--muted)">{{k.label}}</span>
+<div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 8px">
+<span style="font-size: 22px; font-weight: 700; color: {{k.ink}}; font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace">{{k.value}}</span>
+<svg width="86" height="28" viewBox="0 0 86 28" role="img" aria-label="{{k.chartLabel}}"><sc-for list="{{k.bars}}" as="b" hint-placeholder-count="7"><rect x="{{b.x}}" y="{{b.y}}" width="{{b.w}}" height="{{b.h}}" rx="2" fill="{{b.fill}}"></rect></sc-for></svg>
+</div>
+</button>
+</sc-for>
+</section>
+
+<sc-if value="{{hasNeeds}}" hint-placeholder-val="{{ true }}">
+<section aria-label="需要你" style="display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 12px; font-weight: 700; color: var(--warn)">需要你 · {{needCount}}</span>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+<sc-for list="{{needs}}" as="a" hint-placeholder-count="2">
+<div class="pb-card" style="display: flex; align-items: center; gap: 12px; padding: 11px 13px; border-radius: 12px; background: {{a.bg}}; border: 1px solid {{a.line}}; opacity: {{a.opacity}}">
+<span style="width: 30px; height: 30px; border-radius: 15px; background: {{a.badgeBg}}; color: {{a.badgeInk}}; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex: 0 0 auto">{{a.badge}}</span>
+<button type="button" onClick="{{a.open}}" style="flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; border: 0; background: transparent; padding: 0; text-align: left">
+<span style="font-weight: 600; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{a.title}}</span>
+<span style="font-size: 12px; color: var(--muted); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{a.sub}}</span>
+</button>
+<sc-if value="{{a.pending}}" hint-placeholder-val="{{ true }}">
+<button type="button" onClick="{{a.no}}" style="height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--line2); background: var(--panel)">{{a.noText}}</button>
+<button type="button" onClick="{{a.yes}}" style="height: 32px; padding: 0 14px; border-radius: 8px; border: 0; background: var(--solid); color: var(--solidInk); font-weight: 600; white-space: nowrap">{{a.yesText}}</button>
+</sc-if>
+<sc-if value="{{a.settled}}" hint-placeholder-val="{{ false }}"><span style="font-weight: 700; color: {{a.doneInk}}; white-space: nowrap">{{a.doneText}}</span></sc-if>
+</div>
+</sc-for>
+</div>
+</section>
+</sc-if>
+
+<section aria-label="任务流" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; align-items: start">
+<sc-for list="{{lanes}}" as="lane" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; gap: 8px; min-width: 0">
+<div style="display: flex; align-items: center; gap: 6px; padding: 0 2px"><span style="width: 8px; height: 8px; border-radius: 4px; background: {{lane.dot}}"></span><span style="font-weight: 700; font-size: 12px">{{lane.label}}</span><span style="font-size: 12px; color: var(--muted)">{{lane.count}}</span></div>
+<sc-for list="{{lane.cards}}" as="t" hint-placeholder-count="2"><dc-import name="TaskCard" t="{{t}}" hint-size="100%,96px"></dc-import></sc-for>
+<sc-if value="{{lane.empty}}" hint-placeholder-val="{{ false }}"><div style="height: 52px; border: 1px dashed var(--line2); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--faint); font-size: 12px">空</div></sc-if>
+</div>
+</sc-for>
+</section>
+</div>
+</sc-if>
+
+<sc-if value="{{isProjects}}" hint-placeholder-val="{{ false }}">
+<div class="pb-view" style="display: flex; flex-direction: column; gap: 12px">
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">
+<sc-for list="{{projects}}" as="p" hint-placeholder-count="3">
+<button type="button" class="pb-card" onClick="{{p.pick}}" aria-expanded="{{p.open}}" style="text-align: left; display: flex; flex-direction: column; gap: 10px; padding: 13px; border-radius: 12px; background: var(--panel); border: 1px solid {{p.line}}">
+<div style="display: flex; align-items: center; gap: 8px"><span style="font-weight: 700; font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace; flex: 1">{{p.name}}</span><span style="font-size: 12px; color: var(--muted)">{{p.when}}</span></div>
+<div style="display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--chip)" role="img" aria-label="{{p.mixLabel}}"><sc-for list="{{p.mix}}" as="m" hint-placeholder-count="3"><span style="width: {{m.w}}; background: {{m.c}}"></span></sc-for></div>
+<div style="display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--ink2)"><span>{{p.counts}}</span><span style="display: inline-flex; align-items: center; gap: 4px">最顺手 <span style="width: 16px; height: 16px; border-radius: 8px; background: {{p.bestColor}}; color: #FFFFFF; font-size: 9px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center">{{p.bestMark}}</span>{{p.bestName}}</span></div>
+</button>
+</sc-for>
+</div>
+<sc-if value="{{hasOpenProject}}" hint-placeholder-val="{{ false }}">
+<div class="pb-open" style="display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 10px; padding: 13px; border-radius: 14px; background: var(--panel); border: 1px solid var(--solid)">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 12px; font-weight: 700">任务 · {{openProject.name}}</span>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px"><sc-for list="{{openProject.cards}}" as="t" hint-placeholder-count="2"><dc-import name="TaskCard" t="{{t}}" hint-size="100%,96px"></dc-import></sc-for></div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 10px">
+<span style="font-size: 12px; font-weight: 700">谁做这个项目最顺手</span>
+<sc-for list="{{openProject.fit}}" as="f" hint-placeholder-count="3">
+<button type="button" onClick="{{f.go}}" style="display: flex; align-items: center; gap: 8px; border: 0; background: transparent; padding: 0; text-align: left">
+<span style="width: 20px; height: 20px; border-radius: 10px; background: {{f.color}}; color: #FFFFFF; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto">{{f.mark}}</span>
+<span style="width: 70px; font-size: 12px">{{f.name}}</span>
+<span style="flex: 1; height: 6px; border-radius: 3px; background: var(--chip); overflow: hidden"><span style="display: block; height: 6px; width: {{f.w}}; background: var(--ok)"></span></span>
+<span style="width: 56px; text-align: right; font-size: 12px; color: var(--muted)">{{f.text}}</span>
+</button>
+</sc-for>
+<span style="font-size: 12px; font-weight: 700; padding-top: 4px">项目备忘</span>
+<div style="display: flex; flex-wrap: wrap; gap: 6px"><sc-for list="{{openProject.notes}}" as="n" hint-placeholder-count="3"><span style="height: 24px; padding: 0 9px; border-radius: 12px; background: var(--chip); font-size: 12px; display: inline-flex; align-items: center">{{n}}</span></sc-for></div>
+</div>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{isCrew}}" hint-placeholder-val="{{ false }}">
+<div class="pb-view" style="display: flex; flex-direction: column; gap: 14px">
+<sc-for list="{{crew}}" as="g" hint-placeholder-count="2">
+<section style="display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; align-items: baseline; gap: 8px"><span style="font-weight: 700; font-size: 12px">{{g.label}}</span><span style="font-size: 12px; color: var(--muted)">{{g.sub}}</span></div>
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px">
+<sc-for list="{{g.items}}" as="e" hint-placeholder-count="4">
+<button type="button" class="pb-card" onClick="{{e.pick}}" aria-expanded="{{e.open}}" style="text-align: left; display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 12px; background: var(--panel); border: 1px solid {{e.line}}">
+<div style="display: flex; align-items: center; gap: 10px">
+<span style="width: 32px; height: 32px; border-radius: 16px; background: {{e.color}}; color: #FFFFFF; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto">{{e.mark}}</span>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-weight: 700">{{e.name}}</span><span style="font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{e.harness}}</span></div>
+<span style="display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--ink2)"><span style="width: 7px; height: 7px; border-radius: 4px; background: {{e.dot}}"></span>{{e.state}}</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px">
+<sc-for list="{{e.skills}}" as="s" hint-placeholder-count="4">
+<div style="display: flex; align-items: center; gap: 6px"><span style="width: 52px; font-size: 11px; color: var(--muted)">{{s.label}}</span><div style="display: flex; gap: 2px"><sc-for list="{{s.seg}}" as="x" hint-placeholder-count="3"><span style="width: 18px; height: 6px; border-radius: 3px; background: {{x.c}}"></span></sc-for></div><span style="font-size: 11px; color: var(--faint)">{{s.note}}</span></div>
+</sc-for>
+</div>
+<div style="display: flex; align-items: center; gap: 4px">
+<sc-for list="{{e.slotDots}}" as="d" hint-placeholder-count="2"><svg width="22" height="22" viewBox="0 0 36 36" role="img" aria-label="{{d.label}}"><circle cx="18" cy="18" r="14" fill="none" stroke="var(--chip)" stroke-width="5"></circle><circle cx="18" cy="18" r="14" fill="none" stroke="{{d.c}}" stroke-width="5" stroke-linecap="round" stroke-dasharray="{{d.dash}}" transform="rotate(-90 18 18)"></circle></svg></sc-for>
+<span style="flex: 1"></span><span style="font-size: 12px; color: var(--ink2)">{{e.load}}</span>
+</div>
+</button>
+</sc-for>
+</div>
+<sc-if value="{{g.hasOpen}}" hint-placeholder-val="{{ false }}">
+<div class="pb-open" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 13px; border-radius: 14px; background: var(--panel); border: 1px solid var(--solid)">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 12px; font-weight: 700">能力档案 · {{openEx.name}}</span>
+<sc-for list="{{openEx.profile}}" as="pr" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; gap: 3px">
+<div style="display: flex; justify-content: space-between; font-size: 12px"><span>{{pr.label}}</span><span style="color: var(--muted)">{{pr.verdict}}</span></div>
+<div style="position: relative; height: 8px; border-radius: 4px; background: var(--chip)"><span style="position: absolute; left: 0; top: 0; height: 8px; border-radius: 4px; width: {{pr.w}}; background: var(--ok)"></span><span style="position: absolute; top: -3px; left: {{pr.prior}}; width: 2px; height: 14px; background: var(--ink)"></span></div>
+<span style="font-size: 11px; color: var(--faint)">{{pr.src}}</span>
+</div>
+</sc-for>
+<span style="font-size: 11px; color: var(--faint)">竖线 = 公开测评的起点，绿条 = 在你这里的实战。单子越多，越以实战为准。</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 12px; font-weight: 700">账号槽</span>
+<sc-for list="{{openEx.slots}}" as="sl" hint-placeholder-count="2">
+<div style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; background: {{sl.bg}}; border: 1px solid {{sl.line}}">
+<svg width="34" height="34" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="14" fill="none" stroke="var(--chip)" stroke-width="4"></circle><circle cx="18" cy="18" r="14" fill="none" stroke="{{sl.c}}" stroke-width="4" stroke-linecap="round" stroke-dasharray="{{sl.dash}}" transform="rotate(-90 18 18)"></circle></svg>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-weight: 600">{{sl.name}}</span><span style="font-size: 12px; color: var(--muted)">{{sl.sub}}</span></div>
+<span style="font-size: 12px; font-weight: 700; color: {{sl.stateInk}}; white-space: nowrap">{{sl.state}}</span>
+</div>
+</sc-for>
+<sc-if value="{{openEx.hasWhy}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: var(--warn); background: var(--warnBg); padding: 8px 10px; border-radius: 8px">{{openEx.why}}</span></sc-if>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 12px; font-weight: 700">手上的活</span>
+<sc-for list="{{openEx.cards}}" as="t" hint-placeholder-count="2"><dc-import name="TaskCard" t="{{t}}" hint-size="100%,96px"></dc-import></sc-for>
+<sc-if value="{{openEx.idle}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: var(--faint)">手上没活</span></sc-if>
+</div>
+</div>
+</sc-if>
+</section>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{isLog}}" hint-placeholder-val="{{ false }}">
+<div class="pb-view" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-items: start">
+<div style="grid-column: span 2; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 13px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap"><span style="font-weight: 700; font-size: 12px; flex: 1">额度花在哪 · 按账号槽，近 14 天</span><sc-for list="{{legend}}" as="lg" hint-placeholder-count="3"><span style="font-size: 11px; color: var(--ink2); display: inline-flex; align-items: center; gap: 4px"><span style="width: 8px; height: 8px; border-radius: 2px; background: {{lg.c}}"></span>{{lg.name}}</span></sc-for></div>
+<svg width="100%" height="150" viewBox="0 0 560 150" preserveAspectRatio="none" role="img" aria-label="近 14 天每天用量，按账号槽堆叠"><sc-for list="{{usage}}" as="u" hint-placeholder-count="14"><rect x="{{u.x}}" y="{{u.y1}}" width="26" height="{{u.h1}}" fill="#C2410C"></rect><rect x="{{u.x}}" y="{{u.y2}}" width="26" height="{{u.h2}}" fill="#2563EB"></rect><rect x="{{u.x}}" y="{{u.y3}}" width="26" height="{{u.h3}}" fill="#93C5FD"></rect></sc-for></svg>
+</div>
+<div style="background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 13px; display: flex; flex-direction: column; gap: 10px">
+<span style="font-weight: 700; font-size: 12px">结局 · 近 30 天</span>
+<div style="display: flex; height: 14px; border-radius: 7px; overflow: hidden"><span style="width: 66%; background: var(--ok)"></span><span style="width: 16%; background: var(--accent)"></span><span style="width: 8%; background: var(--warn)"></span><span style="width: 10%; background: var(--bad)"></span></div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; font-size: 12px; color: var(--ink2)"><span>一次过 66%</span><span>返工后过 16%</span><span>你接手 8%</span><span>没成 10%</span></div>
+</div>
+<div style="grid-column: span 3; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 4px 13px">
+<sc-for list="{{audit}}" as="r" hint-placeholder-count="5">
+<div style="display: flex; align-items: center; gap: 10px; height: 36px; border-bottom: 1px solid var(--line); font-size: 12px">
+<span style="width: 42px; color: var(--muted); font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace">{{r.time}}</span>
+<span style="width: 18px; height: 18px; border-radius: 9px; background: {{r.c}}; color: #FFFFFF; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center">{{r.mark}}</span>
+<span style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.text}}</span>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isSettings}}" hint-placeholder-val="{{ false }}">
+<div class="pb-view" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">
+<sc-for list="{{settings}}" as="s" hint-placeholder-count="6"><div style="background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 13px; display: flex; flex-direction: column; gap: 4px"><span style="font-weight: 700">{{s.name}}</span><span style="font-size: 12px; color: var(--muted)">{{s.sub}}</span></div></sc-for>
+</div>
+</sc-if>
+
+</div>
+</main>
+
+<div onClick="{{closeTask}}" aria-hidden="true" style="position: fixed; inset: 0; background: var(--scrim); opacity: {{scrimO}}; pointer-events: {{scrimE}}; transition: opacity .3s ease"></div>
+<aside aria-label="任务详情" style="position: fixed; top: 0; right: 0; bottom: 0; width: 440px; max-width: 100%; background: var(--panel); border-left: 1px solid var(--line); box-shadow: var(--shadow); transform: {{panelX}}; transition: transform .38s cubic-bezier(.2,.8,.2,1), background-color .45s ease; display: flex; flex-direction: column; overflow-y: auto">
+<div style="display: flex; align-items: center; gap: 8px; padding: 13px 18px; border-bottom: 1px solid var(--line)">
+<span style="height: 22px; padding: 0 9px; border-radius: 11px; background: {{sel.pillBg}}; color: {{sel.pillInk}}; font-size: 12px; display: inline-flex; align-items: center">{{sel.status}}</span>
+<button type="button" onClick="{{sel.goProject}}" style="height: 22px; padding: 0 9px; border-radius: 11px; border: 0; background: var(--chip); font-size: 12px; font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace">{{sel.project}}</button>
+<span style="font-size: 12px; color: var(--muted)">T-{{sel.id}}</span>
+<span style="flex: 1"></span>
+<button type="button" onClick="{{closeTask}}" aria-label="关闭详情" style="width: 32px; height: 32px; border: 0; border-radius: 8px; background: var(--chip); display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+</div>
+<div style="padding: 16px 18px; display: flex; flex-direction: column; gap: 16px">
+<span style="font-size: 16px; font-weight: 700">{{sel.title}}</span>
+<sc-if value="{{sel.hasRoute}}" hint-placeholder-val="{{ true }}"><span style="font-size: 12px; color: var(--ink2); background: var(--sunk); border: 1px solid var(--line); padding: 8px 10px; border-radius: 9px">{{sel.route}}</span></sc-if>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; font-weight: 700">运行 · {{sel.runCount}} 次</span>
+<sc-for list="{{sel.runs}}" as="r" hint-placeholder-count="2">
+<button type="button" onClick="{{r.pick}}" style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; border: 1px solid {{r.line}}; background: {{r.bg}}; text-align: left">
+<span style="font-size: 12px; color: var(--muted); width: 34px">第 {{r.n}} 次</span>
+<span style="width: 20px; height: 20px; border-radius: 10px; background: {{r.color}}; color: #FFFFFF; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center">{{r.mark}}</span>
+<span style="flex: 1; min-width: 0; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.who}} · {{r.slot}}</span>
+<span style="font-size: 12px; font-weight: 700; color: {{r.ink}}">{{r.outcome}}</span>
+</button>
+</sc-for>
+</div>
+<div style="display: flex; flex-direction: column">
+<sc-for list="{{sel.steps}}" as="st" hint-placeholder-count="4">
+<div style="display: flex; gap: 10px">
+<div style="display: flex; flex-direction: column; align-items: center; width: 18px"><span style="width: 14px; height: 14px; border-radius: 7px; background: {{st.bg}}; border: 2px solid {{st.ring}}; box-sizing: border-box"></span><span style="flex: 1; width: 2px; background: var(--line); min-height: 12px"></span></div>
+<div style="flex: 1; padding-bottom: 10px; display: flex; flex-direction: column"><span style="font-weight: 600">{{st.text}}</span><span style="font-size: 12px; color: var(--muted)">{{st.sub}}</span></div>
+</div>
+</sc-for>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px; padding: 12px; border-radius: 10px; background: var(--sunk); border: 1px solid var(--line)"><span style="font-size: 12px; font-weight: 700">结果</span><span style="color: var(--ink2)">{{sel.result}}</span></div>
+<div style="display: flex; gap: 8px"><button type="button" style="height: 36px; padding: 0 14px; border-radius: 9px; border: 0; background: var(--solid); color: var(--solidInk); font-weight: 600">{{sel.primary}}</button><button type="button" style="height: 36px; padding: 0 14px; border-radius: 9px; border: 1px solid var(--line2); background: var(--panel)">换人再跑一次</button><button type="button" style="height: 36px; padding: 0 14px; border-radius: 9px; border: 1px solid var(--line2); background: var(--panel)">我来接手</button></div>
+</div>
+</aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      view: 'home', rail: true, theme: 'light', sel: null, run: null, openEx: 'pool', openProject: 'ai-workbench',
+      draft: '', answerOnly: false, projectIdx: 0, nextId: 40,
+      approvals: [
+        { id: 1, kind: 'merge', task: 33, title: '合并 T-33「看板按执行者筛选」', sub: 'Codex · +86 −12 · 3 个文件 · 测试过了', risk: '中', st: 'pending' },
+        { id: 2, kind: 'cmd', task: 34, title: 'T-34 想运行 npm install puppeteer', sub: '反代池 · 会联网下载约 170MB', risk: '高', st: 'pending' }
+      ],
+      tasks: [
+        { id: 34, title: '联网找 3 个同类开源项目，写成 docs/compare.md', project: 'ai-workbench', lane: 'run', stage: 2, pct: 55, note: '已读 4 个网页', route: '大脑：反代池 · 难度 2/5 · 联网整理，便宜，代金券快到期', runs: [{ ex: 'pool', slot: '百炼代金券', outcome: '在跑', kind: 'run' }] },
+        { id: 35, title: '做一个科技风宣传页，要能交互', project: 'personal-site', lane: 'run', stage: 1, pct: 25, note: '写第 2 个文件', route: '大脑：Claude · 难度 4/5 · 前端交互，Claude 改代码最强', runs: [{ ex: 'claude', slot: 'Pro 账号 A', outcome: '额度满', kind: 'out' }, { ex: 'claude', slot: 'Pro 账号 B', outcome: '在跑', kind: 'run' }] },
+        { id: 36, title: 'README 补安装截图', project: 'ai-workbench', lane: 'queue', stage: 0, note: '等名额', runs: [] },
+        { id: 37, title: '整理本周用量周报', project: 'ai-workbench', lane: 'queue', stage: 0, note: '大脑在挑人…', runs: [] },
+        { id: 33, title: '看板按执行者筛选', project: 'ai-workbench', lane: 'wait', stage: 3, note: '等你批合并', route: '大脑：Codex · 难度 3/5', runs: [{ ex: 'codex', slot: 'Plus 5 小时窗口', outcome: '等合并', kind: 'wait' }] },
+        { id: 15, title: '阅读 README，分析主要功能', project: 'demo-first', lane: 'wait', stage: 1, failed: true, note: '被拦住：没配项目路径', runs: [{ ex: 'pool', slot: 'DeepSeek 官方', outcome: '被拦住', kind: 'bad' }] },
+        { id: 31, title: '修复看板窄屏溢出', project: 'ai-workbench', lane: 'done', stage: 5, note: '已推送', runs: [{ ex: 'pool', slot: 'DeepSeek 官方', outcome: '没产出', kind: 'bad' }, { ex: 'claude', slot: 'Pro 账号 A', outcome: '完成', kind: 'ok' }] },
+        { id: 30, title: 'demo-feed 加 36氪 源', project: 'demo-feed', lane: 'done', stage: 5, note: '已推送', runs: [{ ex: 'codex', slot: 'Plus 5 小时窗口', outcome: '完成', kind: 'ok' }] }
+      ]
+    };
+  }
+
+  E(key) {
+    return ({
+      pool: { name: '反代池', mark: '池', color: '#2563EB', harness: 'Claude Code + 百炼 / DeepSeek' },
+      claude: { name: 'Claude', mark: 'C', color: '#C2410C', harness: 'Claude Code + Pro 订阅' },
+      codex: { name: 'Codex', mark: 'Cx', color: '#3F3F46', harness: 'Codex CLI + Plus 订阅' },
+      workbuddy: { name: 'WorkBuddy', mark: 'W', color: '#B45309', harness: 'codebuddy 命令行' },
+      dsh: { name: 'dsh', mark: 'd', color: '#0F766E', harness: 'dsh + DeepSeek（只读）' },
+      local: { name: '本机', mark: '本', color: '#7C3AED', harness: '本机模型' },
+      zcode: { name: 'ZCode', mark: 'Z', color: '#15803D', harness: '只能在 ZCode 应用里用' },
+      autoclaw: { name: 'AutoClaw', mark: 'A', color: '#BE123C', harness: '只能在 AutoClaw 应用里用' }
+    })[key] || { name: '大脑挑人中', mark: '?', color: '#8A8A92', harness: '' };
+  }
+
+  card(t) {
+    const last = t.runs[t.runs.length - 1];
+    const e = last ? this.E(last.ex) : this.E('');
+    const dots = [0, 1, 2, 3, 4].map((i) => ({ c: t.failed && i === t.stage ? 'var(--bad)' : i < t.stage ? 'var(--ink)' : 'var(--line2)' }));
+    const wait = t.lane === 'wait';
+    return {
+      title: t.title, project: t.project,
+      exName: e.name, exMark: e.mark, exColor: e.color,
+      runsText: t.runs.length > 1 ? ('第 ' + t.runs.length + ' 次') : '',
+      dots, hasBar: t.lane === 'run', barW: (t.pct || 0) + '%',
+      note: t.note || '', noteInk: t.failed ? 'var(--bad)' : wait ? 'var(--warn)' : 'var(--muted)',
+      bg: t.failed ? 'var(--badBg)' : wait ? 'var(--warnBg)' : 'var(--panel)',
+      line: t.failed ? 'var(--badLine)' : wait ? 'var(--warnLine)' : 'var(--line)',
+      open: () => this.setState({ sel: t.id, run: null })
+    };
+  }
+
+  profiles() {
+    // 0..1：先验（测评）与实战（你这里的一次过率）。数字只给原型示意，实装时从 045 的档案取。
+    return {
+      pool: { code: [0.66, 0.70, '测评 中 · SWE-bench V4 Flash 79%（厂商自报）', '实战 12 单'], term: [0.5, 0.55, '测评 中 · T-Bench V4 Pro 56%', '实战 4 单'], doc: [0.66, 0.82, '测评 中', '实战 9 单'], web: [0.66, 0.6, '测评 中', '实战 3 单，样本少'] },
+      claude: { code: [1, 0.78, '测评 强 · SWE-bench 第一梯队', '实战 8 单'], term: [1, 0.7, '测评 强 · T-Bench 第一梯队', '实战 3 单'], doc: [0.66, 0.9, '测评 中', '实战 5 单'], web: [0.66, 0.5, '测评 中', '实战 2 单，样本少'] },
+      codex: { code: [1, 0.5, '测评 强 · SWE-bench 85%（厂商自报）', '实战 3 单，样本少'], term: [1, 0.5, '测评 强 · T-Bench 64%', '还没跑过'], doc: [0.66, 0.5, '测评 中', '还没跑过'], web: [0.33, 0.5, '测评 弱', '还没跑过'] },
+      workbuddy: { code: [0.66, 0, '测评 中（按底层模型）', '还没跑过'], term: [0.33, 0, '测评 弱', '还没跑过'], doc: [0.66, 0, '测评 中', '还没跑过'], web: [0.66, 0, '测评 中', '还没跑过'] },
+      dsh: { code: [0.33, 0, '只读：不改代码', '—'], term: [0.33, 0, '只读', '—'], doc: [0.66, 0.9, '测评 中', '实战 3 单'], web: [0.66, 0.8, '测评 中', '实战 2 单'] },
+      local: { code: [0.33, 0, '测评 弱', '离线'], term: [0.33, 0, '测评 弱', '离线'], doc: [0.33, 0, '测评 弱', '离线'], web: [0, 0, '不能联网', '离线'] }
+    };
+  }
+
+  slots() {
+    return {
+      pool: [{ name: '百炼代金券', pct: 62, sub: '¥186 · 还有 23 天过期', state: '先用这个', tone: 'ok' }, { name: 'DeepSeek 官方', pct: 8, sub: '¥3.40 · 真钱，最后才用', state: '快没了', tone: 'warn' }],
+      claude: [{ name: 'Pro 账号 A', pct: 0, sub: '5 小时窗口满了', state: '15:45 重置', tone: 'bad' }, { name: 'Pro 账号 B', pct: 64, sub: '5 小时窗口还剩 64% · 本周还剩 71%', state: '正在用', tone: 'ok' }],
+      codex: [{ name: 'Plus 5 小时窗口', pct: 88, sub: '本周还剩 80%', state: '可用', tone: 'ok' }],
+      workbuddy: [{ name: 'WorkBuddy 积分', pct: 0, sub: '没登录，读不到', state: '待登录', tone: 'warn' }],
+      dsh: [{ name: '同反代池的 DeepSeek 官方', pct: 8, sub: '¥3.40', state: '快没了', tone: 'warn' }],
+      local: []
+    };
+  }
+
+  renderVals() {
+    const s = this.state;
+    const T = s.tasks;
+    const V = { home: ['工作台', '派活、拍板、看进度'], projects: ['项目', '每个项目在做什么、谁做它最顺手'], crew: ['剧组', '谁擅长什么、账号还剩多少、手上有什么活'], log: ['记录', '额度花在哪、做成了多少'], settings: ['设置', '接入、安全、通知、外观、备份'] };
+    const ICON = {
+      home: 'M4 5h7v7H4zM13 5h7v4h-7zM13 11h7v8h-7zM4 14h7v5H4z',
+      projects: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
+      crew: 'M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM3 19c0-3 3-5 6-5s6 2 6 5M16 11a3 3 0 1 0 0-6M18 14c2 .6 3 2.4 3 5',
+      log: 'M4 19V5M4 19h16M8 15v-4M12 15V8M16 15v-6'
+    };
+    const pend = s.approvals.filter((a) => a.st === 'pending').length + T.filter((t) => t.failed).length;
+    const nav = ['home', 'projects', 'crew', 'log'].map((k) => {
+      const on = s.view === k;
+      return { label: V[k][0], icon: ICON[k], current: on ? 'page' : 'false', bg: on ? 'var(--accent)' : 'transparent', fg: on ? 'var(--accentInk)' : 'var(--ink)', weight: on ? '700' : '400', hasBadge: k === 'home' && pend > 0, badge: String(pend), pick: () => this.setState({ view: k, sel: null }) };
+    });
+    const go = (view, extra) => () => this.setState({ view, sel: null, ...(extra || {}) });
+
+    // 此刻：五格，每格一个数加一张小图
+    const bars7 = (vals, color, hi) => { const m = Math.max(...vals, 1); return vals.map((v, i) => ({ x: i * 12.3, w: 9, h: Math.max(2, (v / m) * 26), y: 28 - Math.max(2, (v / m) * 26), fill: i === vals.length - 1 ? hi : color })); };
+    const coding = T.filter((t) => t.lane === 'run').length;
+    const tiles = [
+      { label: '在编码 · 最多 3', value: coding + '/3', bars: [0, 1, 2].map((i) => ({ x: i * 29, w: 26, h: 8, y: 10, fill: i < coding ? 'var(--run)' : 'var(--chip)' })), chartLabel: '三个名额，用了 ' + coding + ' 个', go: go('home') },
+      { label: '需要你', value: String(pend), bars: bars7([1, 3, 0, 2, 1, 4, pend], 'var(--line2)', 'var(--warn)'), chartLabel: '近 7 天每天需要你处理的数量', go: go('home'), warn: pend > 0 },
+      { label: '今天做成', value: '7', bars: bars7([3, 5, 2, 6, 4, 8, 7], 'var(--line2)', 'var(--ink)'), chartLabel: '近 7 天每天完成数', go: go('log') },
+      { label: '今天花的', value: '¥4.2', bars: bars7([2.1, 3.4, 1.8, 2.9, 4.0, 4.6, 4.2], 'var(--line2)', 'var(--ink)'), chartLabel: '近 7 天每天花费', go: go('log') },
+      { label: '最快到期的额度', value: '23 天', bars: [{ x: 0, w: 86, h: 8, y: 10, fill: 'var(--chip)' }, { x: 0, w: 53, h: 8, y: 10, fill: 'var(--ok)' }], chartLabel: '百炼代金券还剩 62%', go: go('crew', { openEx: 'pool' }) }
+    ].map((k) => ({ ...k, bg: k.warn ? 'var(--warnBg)' : 'var(--panel)', line: k.warn ? 'var(--warnLine)' : 'var(--line)', ink: k.warn ? 'var(--warn)' : 'var(--ink)' }));
+
+    // 需要你：审批 + 被拦住的任务，同一种卡
+    const settle = (id, st) => {
+      this.setState({ approvals: this.state.approvals.map((x) => x.id === id ? { ...x, st } : x) });
+      setTimeout(() => this.setState({ approvals: this.state.approvals.filter((x) => x.id !== id) }), 1100);
+    };
+    const needs = s.approvals.map((a) => {
+      const ok = a.st === 'ok'; const no = a.st === 'no';
+      return {
+        badge: a.risk, badgeBg: a.risk === '高' ? 'var(--badBg)' : 'var(--warnBg)', badgeInk: a.risk === '高' ? 'var(--bad)' : 'var(--warn)',
+        title: a.title, sub: a.sub, pending: a.st === 'pending', settled: a.st !== 'pending',
+        yesText: a.kind === 'merge' ? '批准合并' : '允许', noText: '驳回',
+        doneText: ok ? (a.kind === 'merge' ? '已批准合并 ✓' : '已允许 ✓') : '已驳回', doneInk: ok ? 'var(--ok)' : 'var(--muted)',
+        bg: ok ? 'var(--okBg)' : 'var(--panel)', line: ok ? 'var(--okLine)' : 'var(--warnLine)', opacity: no ? '0.55' : '1',
+        yes: () => settle(a.id, 'ok'), no: () => settle(a.id, 'no'), open: () => this.setState({ sel: a.task, run: null })
+      };
+    }).concat(T.filter((t) => t.failed).map((t) => ({
+      badge: '停', badgeBg: 'var(--badBg)', badgeInk: 'var(--bad)', title: 'T-' + t.id + ' 被拦住了', sub: t.note + ' · ' + t.project,
+      pending: true, settled: false, yesText: '去改项目', noText: '放弃', doneText: '', doneInk: '', bg: 'var(--panel)', line: 'var(--badLine)', opacity: '1',
+      yes: go('projects', { openProject: t.project }), no: () => this.setState({ tasks: this.state.tasks.filter((x) => x.id !== t.id) }), open: () => this.setState({ sel: t.id, run: null })
+    })));
+
+    const laneDef = [['queue', '排队', 'var(--faint)'], ['run', '在跑', 'var(--run)'], ['wait', '等你', 'var(--warn)'], ['done', '今天完成', 'var(--ok)']];
+    const lanes = laneDef.map(([k, label, dot]) => { const cards = T.filter((t) => t.lane === k).map((t) => this.card(t)); return { label, dot, count: String(cards.length), cards, empty: cards.length === 0 }; });
+
+    // 项目
+    const PROJ = [
+      { key: 'ai-workbench', when: '刚刚', notes: ['测试用 npm test', '零依赖', '界面文案用中文'], fit: [['claude', 0.82, '一次过 82%'], ['pool', 0.7, '70%'], ['codex', 0.5, '样本少']] },
+      { key: 'personal-site', when: '12 分钟前', notes: ['静态站', '部署在 Vercel'], fit: [['claude', 0.75, '75%'], ['pool', 0.5, '样本少']] },
+      { key: 'demo-feed', when: '昨天', notes: ['RSSHub 在 demo-server 上'], fit: [['codex', 0.9, '90%'], ['pool', 0.6, '60%']] },
+      { key: 'demo-first', when: '2 天前', notes: ['执行器里没配路径'], fit: [] }
+    ];
+    const projects = PROJ.map((p) => {
+      const mine = T.filter((t) => t.project === p.key);
+      const n = (l) => mine.filter((t) => t.lane === l).length;
+      const total = Math.max(1, mine.length);
+      const best = p.fit[0] ? this.E(p.fit[0][0]) : { name: '还没人做过', mark: '·', color: '#8A8A92' };
+      const open = s.openProject === p.key;
+      return {
+        name: p.key, when: p.when, open: open ? 'true' : 'false', line: open ? 'var(--solid)' : 'var(--line)',
+        mix: [{ w: (n('done') / total * 100) + '%', c: 'var(--ok)' }, { w: (n('run') / total * 100) + '%', c: 'var(--run)' }, { w: (n('wait') / total * 100) + '%', c: 'var(--warn)' }, { w: (n('queue') / total * 100) + '%', c: 'var(--line2)' }],
+        mixLabel: '完成 ' + n('done') + '，在跑 ' + n('run') + '，等你 ' + n('wait') + '，排队 ' + n('queue'),
+        counts: mine.length + ' 个任务 · ' + n('run') + ' 个在跑', bestName: best.name, bestMark: best.mark, bestColor: best.color,
+        pick: () => this.setState({ openProject: open ? null : p.key })
+      };
+    });
+    const op = PROJ.find((p) => p.key === s.openProject);
+    const openProject = op ? {
+      name: op.key, notes: op.notes,
+      cards: T.filter((t) => t.project === op.key).map((t) => this.card(t)),
+      fit: op.fit.map(([k, v, text]) => { const e = this.E(k); return { name: e.name, mark: e.mark, color: e.color, w: Math.round(v * 100) + '%', text, go: go('crew', { openEx: k }) }; })
+    } : { name: '', notes: [], cards: [], fit: [] };
+
+    // 剧组
+    const P = this.profiles(); const SL = this.slots();
+    const seg = (v) => [0, 1, 2].map((i) => ({ c: v > i / 3 + 0.01 ? 'var(--ok)' : 'var(--chip)' }));
+    const toneC = { ok: 'var(--ok)', warn: 'var(--warn)', bad: 'var(--bad)' };
+    const STATE = { pool: ['在线', 'var(--ok)'], claude: ['在线', 'var(--ok)'], codex: ['在线', 'var(--ok)'], workbuddy: ['待登录', 'var(--warn)'], dsh: ['在线', 'var(--ok)'], local: ['离线', 'var(--faint)'], zcode: ['手动', 'var(--faint)'], autoclaw: ['手动', 'var(--faint)'] };
+    const WHY = { workbuddy: '还没登录：在终端里跑一次 codebuddy 再 /login。', dsh: '只读的原因：dsh 的插件还装不上，它动手前没法先问你。装上就放开。', local: '这台机器上的本机模型没开。', zcode: 'ZCode 的额度只能在它自己的应用里用，这里只帮你记任务。', autoclaw: 'AutoClaw 同理，在它自己的应用里用。' };
+    const exCard = (k) => {
+      const e = this.E(k); const pr = P[k]; const slots = SL[k] || [];
+      const mine = T.filter((t) => t.runs.length && t.runs[t.runs.length - 1].ex === k && t.lane !== 'done');
+      const run = mine.filter((t) => t.lane === 'run').length; const q = mine.filter((t) => t.lane === 'queue').length;
+      const open = s.openEx === k;
+      return {
+        key: k, name: e.name, mark: e.mark, color: e.color, harness: e.harness, state: STATE[k][0], dot: STATE[k][1],
+        skills: pr ? [['改代码', pr.code], ['终端运维', pr.term], ['写文档', pr.doc], ['联网调研', pr.web]].map(([label, v]) => ({ label, seg: seg(v[1] || v[0]), note: '' })) : [{ label: '只记账', seg: seg(0), note: '' }],
+        slotDots: slots.map((x) => ({ c: toneC[x.tone], dash: (x.pct * 0.88).toFixed(1) + ' 88', label: x.name + ' 剩 ' + x.pct + '%' })),
+        load: run || q ? ('在跑 ' + run + ' · 排队 ' + q) : '空闲',
+        line: open ? 'var(--solid)' : 'var(--line)', open: open ? 'true' : 'false',
+        pick: () => this.setState({ openEx: open ? null : k })
+      };
+    };
+    const autoKeys = ['pool', 'claude', 'codex', 'workbuddy', 'dsh', 'local'];
+    const manualKeys = ['zcode', 'autoclaw'];
+    const crew = [
+      { label: '自动干活', sub: '大脑按档案和额度派给它们，危险动作先问你', items: autoKeys.map(exCard), hasOpen: autoKeys.includes(s.openEx) },
+      { label: '你手动用', sub: '额度只能在它们自己的应用里用，这里只记账', items: manualKeys.map(exCard), hasOpen: manualKeys.includes(s.openEx) }
+    ];
+    const k = s.openEx; const pr = P[k];
+    const openEx = k ? {
+      name: this.E(k).name,
+      profile: pr ? [['改代码', pr.code], ['终端运维', pr.term], ['写文档', pr.doc], ['联网调研', pr.web]].map(([label, v]) => ({ label, prior: Math.round(v[0] * 100) + '%', w: Math.round((v[1] || 0) * 100) + '%', verdict: v[1] >= 0.75 ? '擅长' : v[1] >= 0.5 ? '能做' : v[1] > 0 ? '偏弱' : '待验证', src: v[2] + ' · ' + v[3] })) : [],
+      slots: (SL[k] || []).map((x) => ({ name: x.name, sub: x.sub, state: x.state, stateInk: toneC[x.tone], c: toneC[x.tone], dash: (x.pct * 0.88).toFixed(1) + ' 88', bg: x.tone === 'bad' ? 'var(--badBg)' : 'var(--sunk)', line: x.tone === 'bad' ? 'var(--badLine)' : 'var(--line)' })),
+      hasWhy: Boolean(WHY[k]), why: WHY[k] || '',
+      cards: T.filter((t) => t.runs.some((r) => r.ex === k)).map((t) => this.card(t)),
+      idle: !T.some((t) => t.runs.some((r) => r.ex === k))
+    } : { name: '', profile: [], slots: [], hasWhy: false, why: '', cards: [], idle: true };
+
+    // 记录
+    const a = [0.9, 1.0, 0.6, 0.9, 1.2, 1.4, 1.8, 0.4, 0.1, 0.2, 0.5, 0.2, 0.3, 0.4];
+    const b = [0, 0, 0, 0, 0, 0, 0, 0.2, 0.2, 0.6, 1.4, 0.6, 1.0, 1.1];
+    const c = [2.2, 2.4, 1.2, 2.0, 2.8, 3.2, 4.1, 0.6, 0, 0, 0, 0, 0, 0];
+    const sc = 140 / 6;
+    const usage = a.map((v, i) => { const h1 = v * sc, h2 = b[i] * sc, h3 = c[i] * sc; return { x: 6 + i * 39.5, y1: 146 - h1, h1, y2: 146 - h1 - h2, h2, y3: 146 - h1 - h2 - h3, h3 }; });
+
+    // 详情
+    const t = T.find((x) => x.id === s.sel) || T[0];
+    const runs = t.runs;
+    const ri = s.run === null || s.run >= runs.length ? runs.length - 1 : s.run;
+    const OUT = { run: 'var(--run)', ok: 'var(--ok)', bad: 'var(--bad)', out: 'var(--warn)', wait: 'var(--warn)' };
+    const PILL = { run: ['在跑', 'var(--runBg)', 'var(--run)'], queue: ['排队', 'var(--chip)', 'var(--ink2)'], wait: [t.failed ? '被拦住' : '等你', t.failed ? 'var(--badBg)' : 'var(--warnBg)', t.failed ? 'var(--bad)' : 'var(--warn)'], done: ['完成', 'var(--okBg)', 'var(--ok)'] }[t.lane];
+    const D = (text, sub) => ({ text, sub, bg: 'var(--ink)', ring: 'var(--ink)' });
+    const N = (text, sub) => ({ text, sub, bg: 'var(--panel)', ring: 'var(--run)' });
+    const L = (text, sub) => ({ text, sub, bg: 'var(--panel)', ring: 'var(--line2)' });
+    const B = (text, sub) => ({ text, sub, bg: 'var(--bad)', ring: 'var(--bad)' });
+    const cur = runs[ri];
+    let steps = [N('排队', '编码名额满了，空出来就开始'), L('编码', ''), L('合并 → 推送', '')];
+    if (cur && cur.kind === 'run' && t.id === 34) steps = [D('领取', '反代池 · 百炼代金券'), D('读网页 ×4', 'github.com · vibekanban.com · amux.io …'), N('写文件', 'docs/compare.md'), L('测试', ''), L('合并 → 推送', '')];
+    else if (cur && cur.kind === 'run') steps = [D('领取', this.E(cur.ex).name + ' · ' + cur.slot), N('编码', '进行中'), L('测试', ''), L('合并 → 推送', '')];
+    else if (cur && cur.kind === 'out') steps = [D('领取', cur.slot), B('额度满了', '5 小时窗口用完 · 15:45 重置'), D('自动换槽', '下一次用 Pro 账号 B 接着跑')];
+    else if (cur && cur.kind === 'bad' && t.failed) steps = [D('领取', cur.slot), B('被拦住了', '没配项目路径：执行器的 projects 里没有 demo-first')];
+    else if (cur && cur.kind === 'bad') steps = [D('领取', cur.slot), D('写了一段回答', ''), B('没算完成', '一个文件都没改，又没勾「只要回答」')];
+    else if (cur && cur.kind === 'wait') steps = [D('领取', cur.slot), D('编码', '3 个文件 · +86 −12'), D('测试', '全部通过'), N('合并', '等你批'), L('推送', '')];
+    else if (cur && cur.kind === 'ok') steps = [D('领取', cur.slot), D('编码', '2 个文件'), D('测试', '全部通过'), D('合并 → 推送', '已到 origin/main')];
+    const result = t.lane === 'done' ? '做完了：改了 2 个文件，测试全过，已推送。' : t.failed ? '还没动手就被拦住了。把项目路径配上，点「去改项目」。' : t.lane === 'wait' ? '改完了，测试全过。批准后合并，推送会再问你一次。' : t.lane === 'run' ? '还在做，做完这里会出现它的回答。' : '还没开始。';
+    const sel = {
+      id: t.id, title: t.title, project: t.project, status: PILL[0], pillBg: PILL[1], pillInk: PILL[2],
+      hasRoute: Boolean(t.route), route: t.route || '',
+      runCount: String(runs.length),
+      runs: runs.map((r, i) => { const e = this.E(r.ex); const on = i === ri; return { n: i + 1, mark: e.mark, color: e.color, who: e.name, slot: r.slot, outcome: r.outcome, ink: OUT[r.kind], line: on ? 'var(--solid)' : 'var(--line)', bg: on ? 'var(--sunk)' : 'var(--panel)', pick: () => this.setState({ run: i }) }; }),
+      steps, result,
+      primary: t.failed ? '去改项目' : t.lane === 'wait' ? '批准合并' : t.lane === 'done' ? '看改动' : '看实时过程',
+      goProject: go('projects', { openProject: t.project })
+    };
+
+    const projectsList = ['ai-workbench', 'personal-site', 'demo-feed'];
+    return {
+      theme: s.theme, themeLabel: s.theme === 'dark' ? '切换到浅色' : '切换到深色', themePressed: s.theme === 'dark' ? 'true' : 'false',
+      toggleTheme: () => this.setState({ theme: this.state.theme === 'dark' ? 'light' : 'dark' }),
+      railW: s.rail ? '204px' : '60px', railOpen: s.rail, railLabel: s.rail ? '收起侧边栏' : '展开侧边栏',
+      toggleRail: () => this.setState({ rail: !this.state.rail }),
+      nav, goSettings: go('settings'), setBg: s.view === 'settings' ? 'var(--accent)' : 'transparent',
+      codingNow: String(coding),
+      viewTitle: V[s.view][0], viewSub: V[s.view][1],
+      isHome: s.view === 'home', isProjects: s.view === 'projects', isCrew: s.view === 'crew', isLog: s.view === 'log', isSettings: s.view === 'settings',
+      draft: s.draft, onType: (e) => this.setState({ draft: e.target.value }),
+      draftProject: projectsList[s.projectIdx % projectsList.length],
+      cycleProject: () => this.setState({ projectIdx: this.state.projectIdx + 1 }),
+      answerPressed: s.answerOnly ? 'true' : 'false', answerBg: s.answerOnly ? 'var(--solid)' : 'var(--panel)', answerFg: s.answerOnly ? 'var(--solidInk)' : 'var(--ink)', answerLine: s.answerOnly ? 'var(--solid)' : 'var(--line2)',
+      toggleAnswer: () => this.setState({ answerOnly: !this.state.answerOnly }),
+      send: (e) => {
+        e.preventDefault();
+        const title = (this.state.draft || '').trim();
+        if (!title) return;
+        const nt = { id: this.state.nextId, title, project: projectsList[this.state.projectIdx % projectsList.length], lane: 'queue', stage: 0, note: this.state.answerOnly ? '只要回答 · 大脑在挑人…' : '大脑在挑人…', runs: [] };
+        this.setState({ tasks: [nt, ...this.state.tasks], draft: '', nextId: this.state.nextId + 1, view: 'home' });
+      },
+      tiles, needs, hasNeeds: needs.length > 0, needCount: String(needs.length), lanes,
+      projects, hasOpenProject: Boolean(op), openProject,
+      crew, openEx,
+      legend: [{ name: 'Claude · Pro 账号 A/B', c: '#C2410C' }, { name: '百炼代金券', c: '#2563EB' }, { name: 'Codex · Plus', c: '#93C5FD' }],
+      usage,
+      audit: [
+        { time: '10:42', mark: 'C', c: '#C2410C', text: 'T-31 第 2 次运行完成（Claude · Pro 账号 A），已推送' },
+        { time: '10:30', mark: '池', c: '#2563EB', text: 'T-31 第 1 次没算完成：一个文件都没改' },
+        { time: '10:12', mark: '池', c: '#2563EB', text: 'T-34 读网页：github.com、vibekanban.com 等 4 个' },
+        { time: '09:58', mark: '?', c: '#8A8A92', text: '大脑把 T-34 派给反代池 · 难度 2/5 · 代金券还有 23 天过期' },
+        { time: '09:31', mark: 'C', c: '#C2410C', text: 'Pro 账号 A 的 5 小时窗口满了，15:45 重置；T-35 换到 Pro 账号 B 接着跑' }
+      ],
+      settings: [
+        { name: '接入', sub: '执行器、模型后端、GitHub' }, { name: '账号槽', sub: '每个执行者挂哪些自己的账号、先用哪个' },
+        { name: '安全', sub: '审批规则；暂停所有自动执行收在这里' }, { name: '通知', sub: '企业微信：失败必推、等审批推' },
+        { name: '外观', sub: '浅色 / 深色 / 跟随系统、称呼' }, { name: '备份', sub: '每天自动备份' }
+      ],
+      sel, panelX: s.sel ? 'translateX(0)' : 'translateX(104%)', scrimO: s.sel ? '1' : '0', scrimE: s.sel ? 'auto' : 'none',
+      closeTask: () => this.setState({ sel: null })
+    };
+  }
+}
+</script>
+</body>
+</html>

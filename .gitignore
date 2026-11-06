@@ -1,0 +1,10 @@
+node_modules/
+# 根目录的运行时数据目录。写成 /data/ 才只忽略根目录这一层，
+# 否则 src/data/ 也会被一起吃掉（045 的能力先验就放在那儿）。
+/data/
+*.db
+*.db-shm
+*.db-wal
+.env
+.DS_Store
+backups/

@@ -1,0 +1,49 @@
+services:
+  workbench:
+    build:
+      context: .
+      args:
+        NODE_IMAGE: ${NODE_IMAGE:-node:22-slim}
+        # 014: 备份文件名里的版本号。构建前设好，例如
+        #   WB_VERSION=$(git rev-parse --short HEAD) docker compose build
+        WB_VERSION: ${WB_VERSION:-dev}
+    image: ai-workbench:latest
+    container_name: ai-workbench
+    restart: unless-stopped
+    ports:
+      # 024: 默认只有本机能访问。要让同一局域网里的手机打开，在 .env 里写
+      #   WB_BIND=0.0.0.0
+      # 然后再重建。任何情况下都不要在路由器上给 3200 做端口转发——这个端口能批准任意命令。
+      - "${WB_BIND:-127.0.0.1}:3200:3200"
+    env_file: .env
+    environment:
+      # 024a.1：容器里必须监听所有网卡，否则 -p 映射进不来。
+      # 宿主机侧只开放 127.0.0.1 还是 0.0.0.0，由上面 ports 里的 WB_BIND 决定。
+      HOST: 0.0.0.0
+      # 044: 容器出网走宿主机代理。值来自 .env（env_file 已经会传，这里写出来是为了
+      # 让人一眼看见有三个变量、并且没设时也有默认值，不至于因为空值把 fetch 打瘸。
+      # NODE_USE_ENV_PROXY 是 Node 22/24 让 fetch 认代理变量的开关。
+      HTTPS_PROXY: ${HTTPS_PROXY:-}
+      HTTP_PROXY: ${HTTP_PROXY:-}
+      NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,host.docker.internal}
+      NODE_USE_ENV_PROXY: ${NODE_USE_ENV_PROXY:-}
+    volumes:
+      - workbench-data:/data
+      # 014: 备份目录。WB_BACKUP_DIR 是这台电脑上的文件夹（可以是网盘的同步目录），
+      # 容器里固定看到 /backups。不设就用仓库下的 ./backups。
+      - ${WB_BACKUP_DIR:-./backups}:/backups
+    networks:
+      - default
+      - cpa
+
+volumes:
+  workbench-data:
+
+networks:
+  # Default: the project's own network, so a plain `docker compose up` still works.
+  # To let the workbench reach cliproxyapi by name, set in .env:
+  #   WB_CPA_NETWORK=ai-net
+  #   WB_CPA_EXTERNAL=true
+  cpa:
+    name: ${WB_CPA_NETWORK:-ai-workbench-cpa}
+    external: ${WB_CPA_EXTERNAL:-false}

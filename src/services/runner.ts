@@ -592,6 +592,8 @@ export function finishTask(id: number, input: FinishInput): { task: Task; approv
       tool_name: 'git merge',
       tool_input: { branch, commit },
       changed_files: (() => {
+        // 沙箱补丁出容器必须人批。文档路径也可能触发宿主 Git 过滤器。
+        if (input.sandbox === 'docker' || input.sandbox === 'vm') return [];
         const files = Array.isArray(input.changed_files) ? input.changed_files.map(String) : [];
         // 039：超过 500 个文件的任务不猜——直接当「有代码改动」，让人点。截断清单再判定等于拿半份证据放行。
         return files.length > 500 ? [] : files;

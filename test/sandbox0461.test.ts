@@ -140,7 +140,6 @@ describe('046.1 · patch-guard · 正常的活不能挡', () => {
     assert.deepEqual(codes(modify('package.json')), ['package-json']);
     assert.deepEqual(codes(modify('sub/package.json')), ['package-json']);
     assert.deepEqual(codes(modify('package-lock.json')), ['lockfile']);
-    assert.deepEqual(codes(modify('.gitattributes')), ['gitattributes']);
     assert.deepEqual(codes(modify('.github/workflows/ci.yml')), ['github']);
     assert.deepEqual(codes(modify('.husky/pre-commit')), ['hooks']);
     assert.deepEqual(codes(modify('Dockerfile')), ['docker']);
@@ -152,6 +151,31 @@ describe('046.1 · patch-guard · 正常的活不能挡', () => {
 });
 
 describe('046.1 · patch-guard · 逃逸清单 C 组', () => {
+  test('C17 复核 · 改名或复制走属性文件仍拒收', () => {
+    for (const op of ['rename', 'copy']) {
+      rejected(`diff --git a/.gitattributes b/rules.txt\nsimilarity index 100%\n${op} from .gitattributes\n${op} to rules.txt\n`, /改 \.gitattributes 可能让宿主执行外部程序/);
+    }
+  });
+
+  test('C17 复核 · Windows 属性文件短名与退化短名拒收', () => {
+    for (const name of ['GITATT~1', 'GITATT~4', 'GITATT~5', 'gi7d29~1', 'GI7D29~12']) {
+      rejected(add('docs/' + name), /改 \.gitattributes 可能让宿主执行外部程序/);
+    }
+  });
+
+  test('C17 复核 · gitmodules 退化短名拒收', () => {
+    rejected(add('docs/gi7eba~1'), /动了 \.gitmodules/);
+  });
+
+  test('C17 · 拒绝任意目录下新增、修改、改名或写二进制 .gitattributes', () => {
+    const reason = /改 \.gitattributes 可能让宿主执行外部程序（filter\/diff\/merge）/;
+    rejected(modify('.gitattributes'), reason);
+    rejected(add('docs/.gitattributes'), reason);
+    rejected(modify('docs/.GITATTRIBUTES'), reason);
+    rejected('diff --git a/docs/rules.txt b/docs/.gitattributes\nsimilarity index 100%\nrename from docs/rules.txt\nrename to docs/.gitattributes\n', reason);
+    rejected('diff --git a/docs/.gitattributes b/docs/.gitattributes\nnew file mode 100644\nindex 0000000..2222222\nGIT binary patch\nliteral 5\nKcmZQ%00000\n\nliteral 0\nHcmV?d00001\n\n', reason);
+  });
+
   test('13 · 写进 .git：大小写、短名、末尾点和空格、NTFS 流、全角点、零宽字符、..', () => {
     const zw = String.fromCodePoint(0x200c);
     const fullDot = String.fromCodePoint(0xff0e);

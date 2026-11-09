@@ -164,3 +164,30 @@ async function deadProcessPid(): Promise<number> {
   await new Promise<void>((r) => p.once('exit', () => r()));
   return pid;
 }
+
+
+for (const alreadyGone of [false, true]) {
+  test(alreadyGone ? '035.6 停止时被接手的 runner 已退出，也清锁退出' : '035.6 停止时等被接手的 runner 真正退出，再清锁退出',
+    { skip: process.platform === 'win32' ? 'Windows 的 TerminateProcess 不投递 SIGTERM' : false }, async () => {
+      const { state, repo, start } = stage('stay');
+      const orphan = spawn(process.execPath, [join(repo, 'scripts', 'runner.mjs')], {
+        env: { ...process.env, WB_RUNNER_STATE: state, FAKE_MODE: 'stay' },
+        stdio: 'ignore',
+      });
+      live.push(orphan);
+      const pid = orphan.pid!;
+      writeFileSync(join(state, 'runner.lock'), JSON.stringify({ pid, guard: await deadProcessPid() }));
+      const guard = start({ WB_DOG_MS: '60000' });
+      assert.ok(await waitFor(() => readLockRaw(state)?.guard === guard.pid), '守卫要先接手');
+      if (alreadyGone) {
+        orphan.kill('SIGTERM');
+        assert.ok(await waitFor(() => !isAlive(pid)), '先让 runner 退出');
+      }
+      guard.kill('SIGTERM');
+      assert.ok(await waitFor(() => !isAlive(pid), 3000), 'runner 应退出');
+      assert.ok(await waitFor(() => guard.exitCode !== null, 3000), '守卫应退出');
+      assert.equal(guard.exitCode, 0);
+      assert.equal(readLockRaw(state), null, '停止后应清掉自己的锁');
+      assert.doesNotMatch(logText(state), /启动 runner|重开/, '停止期间不能重启');
+    });
+}

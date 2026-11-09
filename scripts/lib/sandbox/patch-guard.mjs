@@ -59,7 +59,9 @@ function foldSeg(seg) {
   return s.toLowerCase();
 }
 const isGitDir = (seg) => { const f = foldSeg(seg); return f === '.git' || /^git~\d+$/.test(f); };
-const isGitmodules = (seg) => { const f = foldSeg(seg); return f === '.gitmodules' || /^gitmod~\d+$/.test(f); };
+const isGitmodules = (seg) => { const f = foldSeg(seg); return f === '.gitmodules' || /^gitmod~\d+$/.test(f) || /^gi7eba~\d+$/.test(f); };
+
+const isGitattributes = (seg) => { const f = foldSeg(seg); return f === '.gitattributes' || /^gitatt~[1-9]\d*$/.test(f) || /^gi7d29~\d+$/.test(f); };
 
 /** 返回问题描述；没问题返回 ''。 */
 function pathProblem(p) {
@@ -100,7 +102,6 @@ function flagFor(p, hasExec) {
   const base = segs[segs.length - 1];
   if (base === 'package.json') return ['package-json', '改了 package.json（看是不是动了 scripts / 依赖）'];
   if (base === 'package-lock.json') return ['lockfile', '改了 package-lock.json'];
-  if (base === '.gitattributes') return ['gitattributes', '改了 .gitattributes'];
   if (segs[0] === '.github') return ['github', '改了 .github/ 下的东西（工作流）'];
   if (segs[0] === '.husky' || segs[0] === '.githooks') return ['hooks', '改了 Git 钩子目录'];
   if (/^dockerfile/.test(base) || /^docker-compose/.test(base)) return ['docker', '改了 Docker 相关文件'];
@@ -217,6 +218,12 @@ export function inspectPatch(text, opts = {}) {
       if (prob) { bad(`${prob}：${safeLabel(p)}`); return result(); }
       const lock = lockedProblem(p);
       if (lock) { bad(`碰了不该碰的东西（${lock}）：${safeLabel(p)}`); return result(); }
+    }
+    for (const p of new Set([aPath, bPath])) {
+      if (isGitattributes(p.split('/').at(-1))) {
+        bad(`改 .gitattributes 可能让宿主执行外部程序（filter/diff/merge）：${safeLabel(p)}`);
+        return result();
+      }
     }
     for (const mode of [f.newMode, f.indexMode].filter(Boolean)) {
       if (mode === '120000') { bad(`符号链接：${safeLabel(bPath)}`); return result(); }

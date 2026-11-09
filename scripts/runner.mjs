@@ -973,8 +973,8 @@ export function makeWorktree(projectPath, root, taskId, run = git) {
 export function nothingChanged(dir, branch, run = git) {
   try {
     const ahead = Number(run(dir, 'rev-list', '--count', `main..${branch}`)) || 0;
-    const dirty = run(dir, 'status', '--porcelain');
-    return ahead === 0 && !String(dirty).trim();
+    if (ahead > 0) return false; // 已有提交，无需刷新工作树；git status 可能运行 clean 过滤器。
+    return !String(run(dir, 'status', '--porcelain')).trim();
   } catch { return false; } // 拿不准就当有改动：宁可多批一次合并，也不要丢掉改动
 }
 

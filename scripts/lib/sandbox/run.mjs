@@ -221,6 +221,14 @@ export function applySandboxPatch({ dir, patch, taskId, gitRun, rejectsDir, tmpR
     // 补丁是容器里按原样出的，直接拿工作区对补丁会「对不上」。提交后再把工作区按宿主设置重新检出。
     // 不再强行改 core.autocrlf：检出和套用用同一套宿主设置，才不会自相矛盾。
     const safe = ['-c', `core.hooksPath=${hooks}`, '-c', 'core.fsmonitor=false', '-c', 'core.symlinks=false', '-c', 'protocol.allow=never', '-c', 'commit.gpgsign=false'];
+    // .gitattributes 可以选择宿主已有的过滤器。整个套用过程只用原始内容，不执行外部过滤命令。
+    const filters = new Set(String(gitRun(dir, 'config', '--null', '--name-only', '--list'))
+      .split('\0').map((key) => /^filter\.(.+)\.(?:clean|smudge|process|required)$/s.exec(key)?.[1]).filter(Boolean));
+    for (const filter of filters) {
+      if (filter.includes('=')) throw new Error('Git 过滤器名称无法安全覆盖，已停止套用补丁');
+      safe.push('-c', `filter.${filter}.clean=`, '-c', `filter.${filter}.smudge=`,
+        '-c', `filter.${filter}.process=`, '-c', `filter.${filter}.required=false`);
+    }
     gitRun(dir, ...safe, 'apply', '--cached', '--binary', '--whitespace=nowarn', file);
     gitRun(dir, ...safe, 'commit', '-q', '--no-verify', '-m', `T-${Number(taskId)} 沙箱里的改动（${r.files.length} 个文件，已过补丁检查）`);
     // worktree 是执行器为这个任务新建的，里面没有别人的改动；按刚提交的内容重新检出。

@@ -175,6 +175,7 @@ function main() {
   // 035.4：这两个是「当前」而不是「这一次」——停止信号和重启定时器都只该有一份。
   let current = null;
   let restartTimer = null;
+  let stopAdopted = null;
 
   /**
    * 035.4：停止信号只注册一次，指向**当前活着的**子进程。
@@ -191,6 +192,7 @@ function main() {
     }
     const plan = stopPlan(current);
     log(`收到 ${sig}，结束 runner（pid ${plan.kill || '无'}）。`);
+    if (stopAdopted) return stopAdopted(sig, plan.exit);
     if (plan.exit) process.exit(0); // 重启间隙里收到停止：没有子进程可等，直接收工
     current.kill(sig);
   };
@@ -305,35 +307,40 @@ function main() {
     log(`runner（pid ${pid}）还活着，但看守它的守卫（${lock.guard ?? '没有记录'}）已经不在了——接手监护，不再起第二个。`);
     writeFileSync(LOCK, JSON.stringify({ ...lock, pid, guard: process.pid, adoptedAt: new Date().toISOString() }), 'utf8');
     current = { pid, kill: (sig) => { try { process.kill(pid, sig); } catch { /* 已经没了 */ } } };
-    let restarting = false;
+    let reapTimer = null;
+    const finishAdopted = () => {
+      clearInterval(reapTimer);
+      clearInterval(dog);
+      stopAdopted = null;
+      current = null;
+      if (stopping) {
+        const cur = readLock();
+        if (Number(cur?.pid) === pid && Number(cur?.guard) === process.pid) {
+          try { unlinkSync(LOCK); } catch { /* 已经没了 */ }
+        }
+        process.exit(0);
+      }
+      log('接手的 runner（pid ' + pid + '）已经退出，重开。');
+      startOnce(0);
+    };
     const reap = () => {
-      const gone = setInterval(() => {
-        if (alive(pid)) return;
-        clearInterval(gone);
-        clearInterval(dog);
-        current = null;
-        if (stopping) return;
-        log(`接手的 runner（pid ${pid}）已经退出，重开。`);
-        startOnce(0);
+      clearInterval(dog);
+      if (!alive(pid)) return finishAdopted();
+      reapTimer ??= setInterval(() => {
+        if (!alive(pid)) finishAdopted();
       }, 100);
     };
+    stopAdopted = (sig, alreadyGone) => {
+      if (!alreadyGone) current.kill(sig);
+      reap();
+    };
     const dog = setInterval(() => {
-      if (stopping || restarting) return;
-      if (!alive(pid)) {
-        restarting = true;
-        log(`接手的 runner（pid ${pid}）自己退了，重开。`);
-        clearInterval(dog);
-        current = null;
-        startOnce(0);
-        return;
-      }
+      if (!alive(pid)) return finishAdopted();
       const b = readBeat();
       if (!beatStale(b)) return;
       if (busyValid(readBusy(), pid)) return;
-      restarting = true;
       log(`接手的 runner ${pid} 心跳停住（最后一下 ${b?.ts ?? '从没写过'}），杀掉重开。`);
       try { process.kill(pid, 'SIGKILL'); } catch { /* 已经没了 */ }
-      clearInterval(dog);
       reap();
     }, DOG_MS);
     return null;

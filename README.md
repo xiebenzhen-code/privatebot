@@ -15,16 +15,17 @@
 - **零依赖**：只用 Node 22 自带的 HTTP 服务和 SQLite，没有 `npm install`，没有构建步骤；数据是一个 SQLite 文件。
 - **做完让另一位看一遍**：派活时可以选「谁审」。审的那位只读、不改，结论是「过 / 要改 / 拿不准」；要改就打回，最多两轮；它不能替你点头。大脑挑人时会写明理由。
 - **说实话、不拿旧信息当现状**：每个任务开头写着今天的日期；执行守则要求没跑的测试不说通过、做了一半要明说、会变的事实（版本、价格、政策）先查再写，查不到标「未核实」。说做完却没有产出文件的，直接算没成。交活后执行器自己把测试再跑一遍，和它说的对照：它说通过、实际没过，点头卡上会直接写出来。这些是对 AI 的要求和几道检查，不是保证——所以还有审和你的点头。
-- **界面一层打开一层**：第一层一句话 + 几行，点开才是细节；墨色加一个黄绿色，只靠深浅分轻重。
+- **停下就收尾**：停止任务后，旧轮次的回报不会把它重新标成完成；沙箱里还没开工的那一轮也不会继续启动 AI。服务端和执行器要一起升级。
+- **界面一层打开一层**：第一层一句话 + 几行，点开才是细节；浅色、深色都用松绿作强调色，只靠深浅分轻重。
 
-以下截图使用独立演示数据库（v0.2）。
+以下截图于 2026-11-13 从当前公开主干重新拍摄，使用独立演示数据，不是真实任务或模型验收记录。电脑、手机，浅色、深色都在下面；旧标签里的界面可能不同。
 
 | 视图 | 浅色 | 深色 |
 |---|---|---|
-| 电脑：左边一条流，右边点开的那件事 | ![浅色电脑](docs/screenshots/v02-light-desk.jpg) | ![深色电脑](docs/screenshots/v02-dark-desk.jpg) |
-| 手机：首页 | ![浅色手机首页](docs/screenshots/v02-light-phone-home.jpg) | ![深色手机首页](docs/screenshots/v02-dark-phone-home.jpg) |
-| 手机：一件事（做 → 审 → 你点头） | ![浅色手机线程](docs/screenshots/v02-light-phone-thread.jpg) | ![深色手机线程](docs/screenshots/v02-dark-phone-thread.jpg) |
-| 请执行者进来 | ![浅色执行者](docs/screenshots/v02-light-crew.jpg) | ![深色执行者](docs/screenshots/v02-dark-crew.jpg) |
+| 电脑：左边一条流，右边点开的那件事 | ![浅色电脑](docs/screenshots/v02-current-light-desk.jpg) | ![深色电脑](docs/screenshots/v02-current-dark-desk.jpg) |
+| 手机：首页 | ![浅色手机首页](docs/screenshots/v02-current-light-phone-home.jpg) | ![深色手机首页](docs/screenshots/v02-current-dark-phone-home.jpg) |
+| 手机：一件事（做 → 审 → 你点头） | ![浅色手机线程](docs/screenshots/v02-current-light-phone-thread.jpg) | ![深色手机线程](docs/screenshots/v02-current-dark-phone-thread.jpg) |
+| 请执行者进来 | ![浅色执行者](docs/screenshots/v02-current-light-crew.jpg) | ![深色执行者](docs/screenshots/v02-current-dark-crew.jpg) |
 
 | 一层 | 是什么 |
 |---|---|

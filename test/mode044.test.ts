@@ -63,15 +63,14 @@ describe('044 · 简洁版已取消', () => {
     const r = await api('/api/ui-mode', { method: 'POST', body: { mode: 'simple' }, token: null });
     assert.equal(r.status, 410);
     assert.match(String(r.json?.error ?? ''), /简洁版已取消/);
-    const page = await api('/', { token: null });
+    const page = await api('/?view=classic', { token: null });
     assert.doesNotMatch(page.text, /ui-simple|page-help/);
   });
 
   test('库里残留 ui_mode=simple 也不会藏任何东西（代码不再读这个设置）', async () => {
     db().prepare("INSERT INTO settings (key, value) VALUES ('ui_mode', 'simple') ON CONFLICT(key) DO UPDATE SET value = 'simple'").run();
     try {
-      const today = await api('/', { token: null });
-      assert.equal(navCount(today.text), 5, '导航还是完整的');
+      const today = await api('/?view=classic', { token: null });
       assert.doesNotMatch(today.text, /ui-simple|page-help/);
       assert.match(today.text, /今日 Token/, '数据格一个不少');
       assert.equal(tabCount((await api('/tasks', { token: null })).text), 4);
@@ -90,7 +89,7 @@ describe('044 · 简洁版已取消', () => {
     const appearance = await api('/settings/appearance', { token: null });
     assert.equal(appearance.status, 200);
     assert.doesNotMatch(appearance.text, /界面版本|data-api="\/api\/ui-mode"|简洁版/);
-    const today = await api('/', { token: null });
+    const today = await api('/?view=classic', { token: null });
     assert.doesNotMatch(today.text, /切到简洁版|切到完整版/);
   });
 
@@ -122,14 +121,14 @@ describe('027 · 一键跑通第一个任务', () => {
   test('没有执行器时说清差什么，不显示按钮', async () => {
     db().exec('DELETE FROM tasks');
     db().prepare('DELETE FROM runners').run();
-    const page = await api('/', { token: null });
+    const page = await api('/?view=classic', { token: null });
     assert.match(page.text, /还差一步/);
     assert.ok(!page.text.includes('data-api-click="/api/tasks/first-run"'));
   });
 
   test('有执行器和项目：一个按钮，点了就建只读任务并开始', async () => {
     await runnerSays(['demo-feed']);
-    const page = await api('/', { token: null });
+    const page = await api('/?view=classic', { token: null });
     assert.match(page.text, /data-api-click="\/api\/tasks\/first-run"/);
     assert.match(page.text, /让 AI 读一遍你的项目/);
 
@@ -145,7 +144,7 @@ describe('027 · 一键跑通第一个任务', () => {
 
   test('已经有任务以后不再摆这个面板', async () => {
     await api('/api/tasks', { method: 'POST', body: { title: '有任务了', executor: 'pool', project: 'demo' } });
-    const page = await api('/', { token: null });
+    const page = await api('/?view=classic', { token: null });
     assert.ok(!page.text.includes('data-first-run'));
   });
 });

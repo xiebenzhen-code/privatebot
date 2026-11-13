@@ -113,7 +113,7 @@ function setting(key: string, fallback = ''): string {
 /**
  * 039：这次改动是不是「只碰了文档」。
  *
- * 只认 `docs/` 下面的普通相对路径。空列表、绝对路径、带 `..` 的、盘符开头的，一律不算——
+ * 只认 `docs/` 下面的普通相对路径；`docs/specs/`（需求单、交接）除外。空列表、绝对路径、带 `..` 的、盘符开头的，一律不算——
  * 拿不准就当有代码改动，让人点一下；自动放行错一次，省下的那一下点击一点都不划算。
  */
 /** 039.1：清单长到这个数就不看内容了。一份长到看不清的清单，不配自动放行。 */
@@ -127,6 +127,8 @@ export function docsOnly(files: unknown): boolean {
     const p = String(raw ?? '').trim().replace(/\\/g, '/').replace(/^\.\//, '');
     if (!p || p.startsWith('/') || /^[a-z]:/i.test(p)) return false;
     if (p.split('/').includes('..')) return false;
+    // 需求单和交接文档不算「普通文档」：后面的 AI 开工前会把它们当要求来读，改它们要你看一眼。
+    if (p.startsWith('docs/specs/')) return false;
     return p.startsWith('docs/');
   });
 }
@@ -142,6 +144,33 @@ export function autoMergeReason(files: unknown, toolName: unknown): string {
   if (!docsOnly(files)) return '';
   const n = (files as unknown[]).length;
   return `按规则自动通过：这次只改了 docs/ 下的 ${n} 个文件，没有代码变动（推送和部署仍然要你点）`;
+}
+
+/**
+ * 062 × 039：要审的任务，只改文档也不在做完那一刻自动过——先让另一位看。
+ * 审过了（结论是「过」），而且这次确实只改了 docs/、开关也还开着，这条合并审批才按规则自己过。
+ * 放行的是「只改文档」这条规则，不是审的那位：它给的是「过」，点头的资格还是规则给的；
+ * 「要改」「拿不准」「没审成」一律留给你点。返回是否放行了。
+ */
+/** 这件事最近一轮，执行器自己跑测试的结果是不是「没过」。 */
+function testsFailed(taskId: number): boolean {
+  const row = db().prepare('SELECT verify FROM tasks WHERE id = ?').get(taskId) as { verify: string } | undefined;
+  try { return !!row?.verify && (JSON.parse(row.verify) as { status?: string }).status === 'fail'; } catch { return false; }
+}
+
+export function autoApproveReviewed(taskId: number): boolean {
+  if (setting('auto_approve_docs', '1') === '0') return false;
+  const a = (db().prepare("SELECT * FROM approvals WHERE task_id = ? AND status = 'pending' AND tool_name = 'git merge' ORDER BY id DESC LIMIT 1").get(taskId)) as Approval | undefined;
+  if (!a) return false;
+  let n = 0;
+  try { n = Number((JSON.parse(a.tool_input || '{}') as { docs_files?: unknown }).docs_files) || 0; } catch { n = 0; }
+  if (n <= 0) return false;
+  // 066：工作台自己跑测试没过的，不自动放行——哪怕审的那位说过、哪怕只改了文档。留给你看一眼。
+  if (testsFailed(taskId)) return false;
+  const why = `按规则自动通过：另一位审过，而且这次只改了 docs/ 下的 ${n} 个文件，没有代码变动（推送和部署仍然要你点）`;
+  db().prepare('UPDATE approvals SET status = ?, feedback = ?, decided_at = ? WHERE id = ?').run('approved', why, nowIso(), a.id);
+  logEvent({ actor: 'system', kind: 'approval.auto', task_id: taskId, approval_id: a.id, text: `「${truncate(a.title, 80)}」自动通过：审过了，只改了文档` });
+  return true;
 }
 
 export function createApproval(input: ApprovalInput): Approval {

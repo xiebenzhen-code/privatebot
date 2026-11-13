@@ -1,8 +1,12 @@
 // 055.1 · 自媒体数据看板：七个平台、记内容、记数据快照（只追加）、账号粉丝、第一层一句话、第二层每条内容。
-import { after, before, beforeEach, describe, test } from 'node:test';
+import { after, before, beforeEach, describe, mock, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer, type Server } from 'node:http';
+import { execFileSync } from 'node:child_process';
 import { loginCookie } from './helpers.ts';
+
+process.env.TZ = 'UTC';
+process.env.WB_TZ = 'America/Los_Angeles';
 
 process.env.WB_TOKEN = 'test-token-055media-0123456789';
 process.env.WB_DB = ':memory:';
@@ -39,6 +43,31 @@ async function api(path: string, method = 'GET', body?: any): Promise<{ status: 
 const daysAgo = (n: number) => new Date(Date.now() - n * 86400000).toISOString();
 
 describe('055.1 · 接口', () => {
+  for (const [zone, expected] of [
+    ['America/Los_Angeles', '2026-11-06T20:00:00.000Z'],
+    ['Pacific/Auckland', '2026-11-05T23:00:00.000Z'],
+  ]) {
+    test(`日期录入在 ${zone} 保留当天中午`, () => {
+      const probe = `
+        import assert from 'node:assert/strict';
+        import { createPost, addStats } from './src/services/media.ts';
+        import { dayOf } from './src/domain.ts';
+        Date.now = () => Date.parse('2026-11-07T00:00:00Z');
+        const day = '2026-11-06';
+        const post = createPost({ platform: 'x', title: '日期测试', published_at: day });
+        assert.equal(dayOf(post.published_at), day);
+        assert.equal(post.published_at, process.env.EXPECTED_NOON);
+        assert.equal(addStats(post.id, { views: 1, at: day }).at, process.env.EXPECTED_NOON);
+        assert.throws(() => createPost({ platform: 'x', title: '日期测试', published_at: '2026-02-30' }), /看不懂/);
+      `;
+      execFileSync(process.execPath, ['--input-type=module', '-e', probe], {
+        cwd: new URL('..', import.meta.url),
+        env: { ...process.env, TZ: 'UTC', WB_TZ: zone, WB_DB: ':memory:', EXPECTED_NOON: expected },
+        windowsHide: true,
+      });
+    });
+  }
+
   test('记一条内容：七个平台都收；平台、标题、链接、日期不对就 400，说人话', async () => {
     for (const p of ['bilibili', 'xiaohongshu', 'douyin', 'channels', 'x', 'instagram', 'facebook']) {
       const r = await api('/api/media/posts', 'POST', { platform: p, title: `EP01 ${p}`, piece: 'EP01' });
@@ -97,6 +126,24 @@ describe('055.1 · 接口', () => {
 });
 
 describe('055.1 · 第一层', () => {
+  test('发布日期默认工作台时区当天，系统 UTC 不覆盖 WB_TZ', async () => {
+    for (const [instant, expected] of [
+      ['2026-11-06T00:30:00Z', '2026-11-05'],
+      ['2026-11-06T20:30:00Z', '2026-11-06'],
+      ['2026-11-01T01:30:00Z', '2026-10-31'],
+    ]) {
+      mock.timers.enable({ apis: ['Date'], now: Date.parse(instant) });
+      try {
+        const response = await api('/media');
+        assert.equal(response.status, 200);
+        const value = /name="published_at" type="date" value="([^"]+)"/.exec(response.text)?.[1];
+        assert.equal(value, expected, instant);
+      } finally {
+        mock.timers.reset();
+      }
+    }
+  });
+
   test('什么都没记：一句话叫你记第一条，七个平台一行一个，全灭', async () => {
     const r = await api('/media');
     assert.equal(r.status, 200);
@@ -104,7 +151,8 @@ describe('055.1 · 第一层', () => {
     assert.equal((r.text.match(/data-media-row="/g) ?? []).length, 7);
     for (const label of ['B站', '小红书', '抖音', '视频号', 'X', 'Instagram', 'Facebook']) assert.ok(r.text.includes(`<span class="group-label">${label}</span>`), label);
     assert.ok(!r.text.includes('media-mark lit'));
-    assert.match(r.text, /class="nav-item on" title="自媒体"/);
+    // 061.1：没有侧栏；自媒体从「高级」进，顶上是「工作台 › 自媒体」。
+    assert.match(r.text, /<nav class="crumbs layer-crumbs"[^>]*><a href="\/">工作台<\/a>/);
   });
 
   test('这周发了：一句话报条数、播放和最好的一条；发过的平台亮；涨粉按 7 天前的快照算', async () => {

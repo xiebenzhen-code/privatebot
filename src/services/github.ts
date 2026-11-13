@@ -3,7 +3,7 @@
 import { db, tx } from '../db.ts';
 import { nowIso, truncate } from '../domain.ts';
 import { logEvent } from './core.ts';
-import { createTask, getTask, updateTask, type Task } from './tasks.ts';
+import { setMaterial, createTask, getTask, updateTask, type Task } from './tasks.ts';
 import { redactText } from './redact.ts';
 import { enqueueGithub, GITHUB_REPO } from './github-outbox.ts';
 
@@ -45,6 +45,11 @@ export function recordGithubSync(problem: unknown): void {
 
 export type IssueTask = { title: string; description: string; project: string; category: string; executor: string | null };
 
+/** 054.8：外部来的一行字——控制字符、换行、零宽和双向覆盖字符都拿掉，压成一行、限长。 */
+export function externalLine(text: unknown, max = 120): string {
+  return String(text ?? '').replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2066-\u2069\ufeff]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
+}
+
 /** `项目: x` / `分类: y` / `执行者: z` on the first lines, then `---`, then the task text. */
 export function parseIssue(issue: { title?: string; body?: string }, repoName: string): IssueTask {
   const body = String(issue.body ?? '');
@@ -57,7 +62,7 @@ export function parseIssue(issue: { title?: string; body?: string }, repoName: s
       if (m) meta[m[1]] = m[2];
     }
   }
-  const title = String(issue.title ?? '').trim().slice(0, 300) || `Issue #${(issue as any).number ?? '?'}`;
+  const title = externalLine(issue.title, 300) || `Issue #${(issue as any).number ?? '?'}`;
   const category = meta['分类'] || 'dev';
   return {
     title,
@@ -130,11 +135,13 @@ export function importIssues(repo: string, items: unknown[]): SyncResult {
       if (!known) {
         const parsed = parseIssue(issue, repoName);
         const task = createTask({
-          title: parsed.title, description: parsed.description, project: parsed.project,
+          // 054.8：正文不进 description（那是给 agent 的指令位），下面单独存成资料。
+          title: parsed.title, description: '', project: parsed.project,
           category: parsed.category, executor: parsed.executor ?? 'pool', status: 'queued', mode: 'manual',
         }, 'system');
         known = task;
         db().prepare('UPDATE tasks SET issue_url = ?, issue_number = ? WHERE id = ?').run(issueUrl, n, task.id);
+        setMaterial(task.id, parsed.description);
         logEvent({ actor: 'system', kind: 'task.from_issue', task_id: task.id, text: '从 Issue #' + n + ' 建了 T-' + task.id });
         commentOnIssue(repo, n, '已收到，任务 T-' + task.id + '，等你在工作台点「开始」。');
         out.created++;
@@ -162,8 +169,9 @@ export function applyCommand(taskId: number, cmd: { cmd: 'rework' | 'cancel'; fe
     logEvent({ actor: 'system', kind: 'task.from_issue', task_id: taskId, text: `T-${taskId} 被 Issue 指令取消` });
     return;
   }
-  const desc = cmd.feedback ? `${task.description}\n\n---\n修改意见（来自 Issue）：\n${cmd.feedback}` : task.description;
-  updateTask(taskId, { status: 'queued', mode: 'manual', step: '按修改意见重做，等点开始', description: desc, start_requested: 0 }, 'system');
+  // 054.8：修改意见也是外部文字，接在资料后面，不碰 description。
+  if (cmd.feedback) setMaterial(taskId, `${task.material ?? ''}\n\n---\n修改意见（来自 Issue）：\n${cmd.feedback}`.trim());
+  updateTask(taskId, { status: 'queued', mode: 'manual', step: '按修改意见重做，等点开始', start_requested: 0 }, 'system');
   logEvent({ actor: 'system', kind: 'task.from_issue', task_id: taskId, text: `T-${taskId} 收到返工意见，回到队列` });
 }
 

@@ -159,7 +159,8 @@ export function candidateProblem(q: Qualified, executor: string, readOnly: boole
 /** 名单里除某个人以外的下一个，按 priority。`needReadOnly` 时只挑只读的，否则只挑能改文件的。 */
 export function nextCandidate(category: string, exclude: string[], needReadOnly = false): Candidate | null {
   return qualified(category).candidates
-    .find((c) => !exclude.includes(c.executor) && (needReadOnly ? c.read_only_only : !c.read_only_only)) ?? null;
+    // 只读的活谁都能接（能写的也能读）；要改文件的活不能给只读执行者。旧写法把「活是只读的」当成「执行者必须只读」，白白卡住。
+    .find((c) => !exclude.includes(c.executor) && (needReadOnly || !c.read_only_only)) ?? null;
 }
 
 // ---------- 提示词 ----------
@@ -333,8 +334,10 @@ export function fallbackRoute(t: Task, whyRaw: string, kind = 'dispatch.route_fa
   // 042.2：退回也要守能力约束。写任务不能「反正没人接就塞给只读的」——那等于派了个做不动的活；
   // 只读的活也别硬塞给要动文件的人（那是浪费额度和审批次数）。约束没记下来（null）按「要改文件」算，从严。
   const need = t.route_read_only === 1;
-  const fits = (c: { read_only_only: boolean }) => (need ? c.read_only_only : !c.read_only_only);
-  const pick = qualified(t.category).candidates.find(fits)?.executor ?? '';
+  // 只读的活：优先给只读执行者（省额度和审批），没有就给能写的——能写的也能读。
+  const fits = (c: { read_only_only: boolean }) => need || !c.read_only_only;
+  const cands = qualified(t.category).candidates;
+  const pick = ((need ? cands.find((c) => c.read_only_only) : undefined) ?? cands.find(fits))?.executor ?? '';
   const after = applyRoute(t, pick || 'me', pick ? t.difficulty ?? null : null, why, now, need);
   markCall(t.id, 'failed');
   logEvent({

@@ -82,12 +82,13 @@ describe('043 F · 没干活不算完成', () => {
     assert.equal(t.result_text, '我没法联网', '它说了什么照样留着，方便你看');
   });
 
-  test('要产出（没勾只要回答）却一个文件都没改 → 失败，告诉你怎么办', async () => {
+  test('要产出却一个文件都没改 → 失败', async () => {
     const id = await running();
     const t = await finish(id, { result: 'done', no_changes: true, result_text: '我觉得可以这样做……' });
     assert.equal(t.status, 'failed');
     assert.match(t.fail_reason ?? '', /没有产出任何文件/);
-    assert.match(t.fail_reason ?? '', /只要一个回答/);
+    // 061.1：「只要回答」从界面上删了，提示里不再叫你去勾它。
+    assert.doesNotMatch(t.fail_reason ?? '', /只要一个回答/);
   });
 
   test('勾了只要回答、没被拦 → 照 028 直接完成', async () => {
@@ -260,8 +261,11 @@ describe('043 B · 不弹黑框', () => {
     assert.match(src, /detached: !win,/);
   });
 
-  test('计划任务用隐藏窗口的 PowerShell 起守卫', () => {
+  test('计划任务起守卫时不弹黑框（054：wscript 隐藏启动器取代 043 的隐藏 powershell）', () => {
     const doc = read('docs/INSTALL-WINDOWS.md');
-    assert.match(doc, /-WindowStyle Hidden[^\n]*runner|\$guard[^\n]*-WindowStyle Hidden|-WindowStyle Hidden -ExecutionPolicy Bypass -Command `"& '\$node' '\$guard'`"/);
+    // 动作必须是 wscript + launch-hidden.vbs：窗口样式 0 创建即无控制台，Windows Terminal 交接无从发生。
+    assert.match(doc, /install-launcher\.mjs/);
+    assert.match(doc, /launch-hidden\.vbs/);
+    assert.doesNotMatch(doc, /-WindowStyle Hidden -ExecutionPolicy Bypass -Command `"& '\$node' '\$guard'`"/, '043 的旧动作已被 054 取代');
   });
 });

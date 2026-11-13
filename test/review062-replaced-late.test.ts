@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import {test} from 'node:test';
+process.env.WB_DB=':memory:';
+test('064 换人接着审后，旧审查者迟到结论不得改写新审查',async()=>{
+ const d=await import('../src/db.ts');d.useDb(d.openDb(':memory:'));
+ const t=await import('../src/services/tasks.ts');
+ const r=await import('../src/services/runner.ts');
+ const v=await import('../src/services/review.ts');
+ d.db().prepare('UPDATE executor_settings SET enabled=0').run();
+ for(const e of ['codex','claude','pool'])d.db().prepare('UPDATE executor_settings SET enabled=1,claimable=1 WHERE executor=?').run(e);
+ const parent=t.createTask({title:'审查移交',executor:'codex',project:'demo'},'me');
+ d.db().prepare("UPDATE tasks SET status='running',reviewer='claude' WHERE id=?").run(parent.id);
+ r.finishTask(parent.id,{result:'done',branch:'wb/T-'+parent.id,changed_files:['a.txt']});
+ const old=d.db().prepare('SELECT id FROM tasks WHERE review_of=?').get(parent.id);
+ d.db().prepare("UPDATE tasks SET status='running',runner_id='old-reviewer',updated_at=? WHERE id=?").run(new Date(Date.now()-86400000).toISOString(),old.id);
+ v.sweepReviews();
+ assert.equal(t.getTask(parent.id).review_state,'reviewing');
+ assert.equal(t.getTask(parent.id).reviewer,'pool');
+ r.finishTask(old.id,{result:'done',no_changes:true,result_text:'```wb-review\n{"verdict":"过","summary":"旧审查迟到","items":[]}\n```'});
+ assert.equal(t.getTask(parent.id).review_state,'reviewing','旧审查者不能抢先结束接任者的审查');
+});

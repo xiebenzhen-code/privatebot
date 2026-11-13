@@ -38,8 +38,8 @@ function runningTask(title = '改一句文档'): number {
 describe('039 路径判定：只认 docs/ 下的普通相对路径', () => {
   test('只改 docs/ 里面的文件才算', () => {
     assert.equal(approvals.docsOnly(['docs/a.md']), true);
-    assert.equal(approvals.docsOnly(['docs/a.md', 'docs/specs/039.md']), true);
-    assert.equal(approvals.docsOnly(['docs\\specs\\a.md']), true, 'Windows 反斜杠也算');
+    assert.equal(approvals.docsOnly(['docs/a.md', 'docs/reports/039.md']), true); // 064 起 docs/specs/ 不自动放行，见 crew064.test.ts
+    assert.equal(approvals.docsOnly(['docs\\guide\\a.md']), true, 'Windows 反斜杠也算');
     assert.equal(approvals.docsOnly(['./docs/a.md']), true, '带 ./ 也算');
   });
 

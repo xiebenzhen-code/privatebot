@@ -370,7 +370,11 @@ describe('055.2 · 页面', () => {
     const id = await claimed();
     await ask(id, [{ key: 'k', title: '要不要加缓存', options: ['要', '不要'] }]);
     const home = (await human('/')).text;
-    assert.match(home, /有 1 件事等你拍板/);
+    // 061.1：首页是一条流——它在「等你」里，写着「等你选」。
+    assert.match(home, /等你<span class="flow-n"> · 1</);
+    assert.match(home, /data-kind="ask"/);
+    assert.match(home, /等你选/);
+    assert.match((await human('/?view=classic')).text, /有 1 件事等你拍板/);
     const group = (await human('/?g=you')).text;
     assert.match(group, /\? 要不要加缓存/);
     assert.match(group, /needs-you/);

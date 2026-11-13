@@ -320,7 +320,10 @@ describe('031a 页面与推送', () => {
     const { loginCookie } = await import('./helpers.ts');
     const cookie = await loginCookie(base, 'test-password-0123456789');
     // 044 v3：工作台第一层只留一行，点进去（/?g=branches）才是带按钮的那一块。
-    const home = await (await fetch(`${base}/`, { headers: { Cookie: cookie } })).text();
+    // 061.1：旧分支不上首页（用户 11-09 定），在「高级」和原来的首页里。
+    const flow = await (await fetch(`${base}/`, { headers: { Cookie: cookie } })).text();
+    assert.ok(!flow.includes('data-stale-row'), '新首页不提旧分支');
+    const home = await (await fetch(`${base}/?view=classic`, { headers: { Cookie: cookie } })).text();
     assert.match(home, /data-stale-row/);
     assert.ok(!home.includes('data-stale-branches'), '第一层不摆整张表');
     const html = await (await fetch(`${base}/?g=branches`, { headers: { Cookie: cookie } })).text();

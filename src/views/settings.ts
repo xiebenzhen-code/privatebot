@@ -11,6 +11,7 @@ import { selfEnabled, selfProject, selfRepo, selfdevState } from '../services/se
 import { digestSettings } from '../services/digest.ts';
 import { EXCLUDED, listSources } from '../services/sources.ts';
 import { currentMode, exposureState } from '../services/exposure.ts';
+import { brandMark } from './layout.ts';
 import { html, type Safe } from './html.ts';
 import { tabLabel } from './routes.ts';
 
@@ -492,7 +493,7 @@ export function loginPage(error?: string): string {
 <title>登录 · 我的工作台</title><link rel="stylesheet" href="/static/style.css"></head>
 <body class="login-body">
 <form class="login" method="post" action="/login">
-  <span class="brand-mark big"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 17l6-6-6-6 M12 19h8"></path></svg></span>
+  <span class="brand-p-wrap">${brandMark(56)}</span>
   <h1>我的工作台</h1>
   <label class="field"><span>密码（WB_PASSWORD）</span><input type="password" name="password" required autofocus autocomplete="current-password"></label>
   ${error ? html`<p class="error" role="alert">${error}</p>` : ''}

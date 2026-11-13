@@ -12,8 +12,12 @@ describe('030 单实例守卫', () => {
     assert.equal(decide('not-an-object'), 'take');
   });
 
-  test('锁里的进程还活着就跳过', () => {
-    assert.equal(decide({ pid: 4242, startedAt: '2026-10-31T00:00:00Z' }, () => true), 'skip');
+  // 2026-11-06：这一支原来叫 skip（「runner 和守卫都在就退出」）。它把事故喂大了：
+  // Stop-ScheduledTask 只带走了外层 powershell，guard 和 runner 都成了孤儿还在跑，
+  // 下一次启动读到的正好是「两个都在」→ skip 立刻退出，计划任务看着起来了，
+  // 实际一个进程都没换。现在只要还有 runner 活着就接手，并请旧守卫让位。
+  test('锁里的进程还活着就接手，不再起第二个', () => {
+    assert.equal(decide({ pid: 4242, startedAt: '2026-10-31T00:00:00Z' }, (pid: number) => pid === 4242), 'adopt');
   });
 
   test('锁里的进程已经不在就接管', () => {

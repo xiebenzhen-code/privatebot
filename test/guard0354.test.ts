@@ -13,8 +13,29 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { processCreationTime } from '../scripts/runner-guard.mjs';
 
 const GUARD = fileURLToPath(new URL('../scripts/runner-guard.mjs', import.meta.url));
+
+/**
+ * 2026-11-11：守卫起一次，要先**同步**查三次进程创建时间（`powershell -Command Get-CimInstance
+ * Win32_Process`）：自己、父进程、刚 spawn 的那个；判锁时再查两次。这台机器（Win11 26200，
+ * 2026-11 累积安全更新之后）单次 2.3–2.5 秒，而且第二次起常返回空、触发重试，于是「起一次守卫」
+ * 从几十毫秒变成 5–12 秒。原来按「毫秒级」写的 8/10 秒预算，会把「还在查创建时间」误判成
+ * 「守卫不干活」——测试红了，守卫本身没问题。
+ *
+ * 这里在进程里量一次真实代价，把「等守卫起来」的预算按它算出来：机器快，预算自然就小。
+ */
+function startupBudget(): number {
+  const t0 = Date.now();
+  try { processCreationTime(process.pid); } catch { /* 查不到也量得出耗时 */ }
+  // 单次超过 5 秒就按 5 秒算：WMI 真坏掉时不要把等待放大成几分钟的空等。
+  const one = Math.min(5_000, Math.max(200, Date.now() - t0));
+  // 一次启动 3 次查询 + 判锁 2 次，按每次都可能重试一轮算，另外留 8 秒给真正的逻辑。
+  // 本机单次 2.4 秒 → 32 秒；WMI 秒回的机器 → 10 秒，和原来的量级一致。
+  return 10 * one + 8_000;
+}
+const STARTUP_MS = startupBudget();
 /**
  * Windows 上 `child.kill('SIGTERM')` 直接 TerminateProcess，进程里的处理器根本收不到
  * （本机实测：handler 没跑，exit 报 SIGTERM）。所以「停止信号」这两条只能在 Linux 上用真信号验；
@@ -32,7 +53,7 @@ after(() => {
 });
 
 const FAKE = `
-import { existsSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 
@@ -42,10 +63,19 @@ const beat = () => writeFileSync(join(STATE, 'runner.beat'), JSON.stringify({ ts
 const mark = (name) => writeFileSync(join(STATE, name), String(process.pid), 'utf8');
 
 if (MODE === 'long-busy') {
-  // 先写心跳和忙声明，再把主线程真的钉住 2.6 秒
+  // 2026-11-11：守卫 spawn 完 runner 才去查创建时间、才挂上巡检定时器（本机 2–7 秒）。
+  // 原来这里不等就钉主线程，2.6 秒的忙窗整段落在守卫的盲窗里，断言「先不杀」永远看不到——
+  // 测的其实是「守卫起得多快」。现在先写心跳和忙声明，等锁里出现自己（= 守卫已经进入巡检），
+  // 再把主线程真钉住 2.6 秒，让「忙」和「巡检」确实撞上。
+  const sleep = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+  const owned = () => {
+    try { return JSON.parse(readFileSync(join(STATE, 'runner.lock'), 'utf8')).pid === process.pid; } catch { return false; }
+  };
+  beat();
+  for (let i = 0; i < 1200 && !owned(); i++) sleep(50); // 最多等 60 秒；最坏情况（3 次查询 × 3 次重试）约 22 秒
   beat();
   writeFileSync(join(STATE, 'runner.busy'), JSON.stringify({
-    pid: process.pid, until: new Date(Date.now() + 4000).toISOString(), why: '测试用的长命令',
+    pid: process.pid, until: new Date(Date.now() + 60000).toISOString(), why: '测试用的长命令',
   }), 'utf8');
   spawnSync(process.execPath, ['-e', 'setTimeout(()=>{}, 2600)']);
   beat();
@@ -101,7 +131,7 @@ const isAlive = (pid: number) => {
   try { process.kill(pid, 0); return true; } catch { return false; }
 };
 
-async function waitFor(what: () => boolean, ms = 8000): Promise<boolean> {
+async function waitFor(what: () => boolean, ms = STARTUP_MS): Promise<boolean> {
   const end = Date.now() + ms;
   while (Date.now() < end) {
     if (what()) return true;
@@ -132,7 +162,7 @@ describe('035.4 忙声明本身：有界才算数', () => {
 describe('035.4-1 合法长命令：心跳停住也不杀', () => {
   test('主线程被钉住 2.6 秒（阈值 0.4 秒）仍然跑完，日志写明「先不杀」', async () => {
     const s = stage('long-busy', { WB_BEAT_STALE_MS: '400', WB_DOG_MS: '800', WB_BACKOFF_MS: '8000' });
-    const done = await waitFor(() => existsSync(join(s.state, 'finished.mark')), 10_000);
+    const done = await waitFor(() => existsSync(join(s.state, 'finished.mark')), STARTUP_MS);
     const log = text_(s.state);
     assert.equal(done, true, `长命令没跑完，日志：\n${log}`);
     assert.match(log, /先不杀/, '守卫应该认出这是忙，不是死');
@@ -142,10 +172,16 @@ describe('035.4-1 合法长命令：心跳停住也不杀', () => {
 
   test('真卡死（没声明）照杀照重启', async () => {
     const s = stage('hang', { WB_BEAT_STALE_MS: '300', WB_DOG_MS: '800', WB_BACKOFF_MS: '300' });
-    const killed = await waitFor(() => /杀掉重开/.test(text_(s.state)), 8000);
+    // 先等守卫把锁发出来——那表示三次同步查询已经做完、巡检定时器挂上了。
+    // 从这一刻起算「多久该杀掉」，而不是从 spawn 算，否则等的是守卫起得多快。
+    assert.ok(await waitFor(() => s.lock() > 0, STARTUP_MS), `守卫应该先接管，日志：\n${text_(s.state)}`);
+    const firstPid = s.lock();
+    const killed = await waitFor(() => /杀掉重开/.test(text_(s.state)), STARTUP_MS);
     const log = text_(s.state) + `\n[debug] guard=${s.child.exitCode}/${s.child.signalCode} files=${existsSync(s.state) ? (readdirSync(s.state).join(',')) : '?'}`;
     assert.equal(killed, true, `真卡死必须被杀，日志：\n${log}`);
-    const restarted = await waitFor(() => s.lock() > 0, 5000);
+    // 认「换了个新的 pid」而不是「锁里有个 pid」——旧锁要等 exit 才清，光看有没有值会当场为真。
+    // 一次读出来再比：读两次的话，两次之间撞上 unlink 会返回 0，反而误判成「换了新的」。
+    const restarted = await waitFor(() => { const p = s.lock(); return p > 0 && p !== firstPid; }, STARTUP_MS);
     assert.equal(restarted, true, `杀掉之后应该重启了一个新的，日志：\n${text_(s.state)}`);
     await stop(s.child);
   });
@@ -170,7 +206,7 @@ describe('035.4-2 停止信号：打的是现在活着的那个', () => {
     assert.equal(exited, true, '守卫收到 SIGTERM 应该退出');
     const gone = await waitFor(() => !isAlive(pid), 4000);
     assert.equal(gone, true, `守卫自己退了，但活着的 runner（pid ${pid}）还在——这就是这次要修的那个洞`);
-    assert.match(text_(s.state), new RegExp(`结束 runner（pid ${pid}）`), '日志要指向真正被停的那个 pid');
+    assert.match(text_(s.state), new RegExp(`结束 runner(?: 整棵进程树)?（pid ${pid}）`), '日志要指向真正被停的那个 pid');
   });
 
   test('重启间隙里 SIGTERM：直接收工，不许过一会儿又冒出来', { skip: STOP_SKIP }, async () => {

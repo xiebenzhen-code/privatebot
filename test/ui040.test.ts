@@ -245,14 +245,9 @@ describe('040 D · 抽屉按 结果 → 过程 → 备忘 → 审计 排', () =>
 // ---------- 4. 导航与旧地址 ----------
 
 describe('040 E · 导航', () => {
-  test('五项：工作台 / 剧组 / 自媒体 / 记录 / 设置（044 + 055）', async () => {
-    const page = await api('/');
-    assert.equal(navCount(page.text), 5);
-    for (const label of ['工作台', '剧组', '自媒体', '记录', '设置']) {
-      assert.ok(page.text.includes(`title="${label}"`), `导航缺 ${label}`);
-    }
-    const tasksPage = await api('/tasks');
-    assert.match(tasksPage.text, /class="nav-item on" title="工作台"/, '任务那几页算在工作台下面');
+  test('061.1：没有侧栏导航；原来的五个地方都还能打开', async () => {
+    for (const path of ['/', '/team', '/media', '/data', '/settings', '/tasks', '/advanced']) assert.equal((await api(path)).status, 200, path);
+    assert.ok(!(await api('/?view=classic')).text.includes('id="wb-side"'));
   });
 
   test('数据那几页照旧能打开', async () => {
@@ -268,7 +263,7 @@ describe('040 E · 导航', () => {
 describe('044 v3 · 工作台一层一层', () => {
   test('第一层：一句话现状 + 四行（等你拍板 / 在跑 / 排队 / 今天完成），不摆任务卡、数据格和小图', async () => {
     tasks.createTask({ title: '第一层不该出现的卡', executor: 'claude', project: 'demo', status: 'running' }, 'claude');
-    const page = (await api('/')).text;
+    const page = (await api('/?view=classic')).text;
     for (const k of ['you', 'run', 'queue', 'done']) assert.match(page, new RegExp(`data-group-row="${k}"`), k);
     for (const label of ['等你拍板', '在跑', '排队', '今天完成']) assert.ok(page.includes(label), label);
     assert.match(page, /class="lede-line"/);
@@ -298,21 +293,24 @@ describe('044 v3 · 工作台一层一层', () => {
   });
 
   test('一句话里的数字和四行的数字是同一个口径', async () => {
-    const page = (await api('/')).text;
+    const page = (await api('/?view=classic')).text;
     const n = Number(page.match(/data-group-row="you"[^>]*>\s*<span class="group-n">(\d+)/)?.[1] ?? -1);
     if (n > 0) assert.match(page, new RegExp(`有 ${n} 件事等你拍板`));
   });
 
-  test('顶上的一句话派活框在每个视图都有，派出去是唯一的荧光按钮', async () => {
-    for (const path of ['/', '/team', '/data', '/settings']) {
+  test('061：派活框只在首页；别的页一屏最多一个荧光按钮', async () => {
+    const home = (await api('/')).text;
+    assert.match(home, /<form class="ask" data-api="\/api\/tasks\/quick"/);
+    assert.equal((home.match(/class="btn accent"/g) ?? []).length, 0, '首页没有荧光按钮：亮的只有「等你」那几行');
+    for (const path of ['/team', '/data', '/settings']) {
       const html = (await api(path)).text;
-      assert.match(html, /<form class="ask" data-api="\/api\/tasks\/quick"/, path);
-      assert.equal((html.match(/class="btn accent"/g) ?? []).length, 1, `${path} 只有一个荧光按钮`);
+      assert.ok(!html.includes('data-api="/api/tasks/quick"'), path);
+      assert.ok((html.match(/class="btn accent"/g) ?? []).length <= 1, path);
     }
   });
 
   test('7 天用量图和机器不再出现在今天页', async () => {
-    const page = await api('/');
+    const page = await api('/?view=classic');
     assert.equal(page.text.includes('近 7 天 Token 用量'), false, '用量图挪去 /data 了');
     assert.equal(/<h2>机器<\/h2>/.test(page.text), false, '机器挪去 /data 了');
   });
@@ -341,7 +339,7 @@ describe('040 F · 动效沿用 038', () => {
   });
 
   test('一屏仍然只有一个荧光按钮', async () => {
-    const page = await api('/');
+    const page = await api('/?view=classic');
     const accents = (page.text.match(/class="btn[^"]*accent/g) ?? []).length;
     assert.ok(accents <= 1, `今天页有 ${accents} 个荧光按钮`);
   });

@@ -578,6 +578,61 @@ export const MIGRATIONS: string[] = [
   // 046.8：收尾上报的幂等键。执行器回报 finish 遇到断网会重发，同一个键第二次到达时什么都不做——
   // 否则会多建一条合并审批、多记一条日志。
   `ALTER TABLE tasks ADD COLUMN finish_key TEXT NOT NULL DEFAULT ''`,
+  // 054.8：外部来的文字（GitHub Issue 正文、Issue 里的修改意见）只当资料，单独一列，永不进提示词。
+  // 这一列只有导入通道能写（setMaterial），网页表单和脚本接口都碰不到。
+  // 旧的 Issue 任务：说明整段挪进资料——分不清哪句是后来在工作台里改的，按「都是外部的」算，宁可少给不可多给。
+  `ALTER TABLE tasks ADD COLUMN material TEXT NOT NULL DEFAULT '';
+  UPDATE tasks SET material = description, description = '' WHERE issue_url IS NOT NULL AND issue_url != ''`,
+  // 060.1：包的开关状态。只记「你对哪个内容点过头」——包的声明在文件夹里，包的数据在项目里，这里都不存。
+  // hash 是你启用那一刻的内容哈希；文件一变就对不上，包自动不再生效。
+  `
+  CREATE TABLE pack_state (
+    name TEXT PRIMARY KEY,
+    status TEXT NOT NULL DEFAULT 'off',
+    hash TEXT NOT NULL DEFAULT '',
+    enabled_at TEXT,
+    updated_at TEXT NOT NULL
+  );
+  `,
+  // 061：没成的事你点了「算了，收起来」的时间。收起来的不再算「等你」；任务本身和记录都留着。重新开始时清空。
+  `ALTER TABLE tasks ADD COLUMN dismissed_at TEXT`,
+  // 061.3：能自己好的失败（超时、断网、接口忙）先自动重试，不打扰你。这里记试过几次；你亲手重新开始时清零。
+  `ALTER TABLE tasks ADD COLUMN auto_retries INTEGER NOT NULL DEFAULT 0`,
+  // 062：审。reviewer = 谁来审（空 = 不审）；review_of = 这件事是在审哪一件（只读的那件）；
+  // review_round / review_state 记在干活那件事上；review_notes 是打回时交给干活那位的意见全文（资料）。
+  `ALTER TABLE tasks ADD COLUMN reviewer TEXT NOT NULL DEFAULT '';
+  ALTER TABLE tasks ADD COLUMN review_of INTEGER;
+  ALTER TABLE tasks ADD COLUMN review_round INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE tasks ADD COLUMN review_state TEXT NOT NULL DEFAULT '';
+  ALTER TABLE tasks ADD COLUMN review_notes TEXT NOT NULL DEFAULT '';
+  CREATE TABLE reviews (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    task_id INTEGER NOT NULL,
+    round INTEGER NOT NULL,
+    reviewer TEXT NOT NULL,
+    verdict TEXT NOT NULL,
+    summary TEXT NOT NULL DEFAULT '',
+    items TEXT NOT NULL DEFAULT '[]',
+    at TEXT NOT NULL
+  );
+  CREATE INDEX idx_reviews_task ON reviews(task_id, id);`,
+  // 062：线程里「谁说了什么」。每一轮做完，执行者最后那段话记一条；你回的话也记一条。
+  // 和 task_log 不同：task_log 是工作台记的流水（阶段、后端），这里是人和执行者自己的话，按时间排进线程。
+  `
+  CREATE TABLE task_says (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    task_id INTEGER NOT NULL,
+    who TEXT NOT NULL,
+    text TEXT NOT NULL,
+    at TEXT NOT NULL
+  );
+  CREATE INDEX idx_task_says_task ON task_says(task_id, id);`,
+  // 062：为什么是这位来审——一句固定格式的话（你点的 / 大脑按什么挑的），显示在线程里。
+  `ALTER TABLE tasks ADD COLUMN review_why TEXT NOT NULL DEFAULT '';`,
+  // 064：执行者「歇着」——不接活，但头像还在队里（灰的）。enabled=0 且 resting=0 就是不在队里。
+  `ALTER TABLE executor_settings ADD COLUMN resting INTEGER NOT NULL DEFAULT 0;`,
+  // 066：执行器自己跑测试的结果（JSON：status / cmd / code / tail / ms / why / where）。和执行者的说法对照用。
+  `ALTER TABLE tasks ADD COLUMN verify TEXT NOT NULL DEFAULT '';`,
 ];
 
 export function openDb(file: string = process.env.WB_DB ?? './data/workbench.db', opts: { at?: number } = {}): DB {

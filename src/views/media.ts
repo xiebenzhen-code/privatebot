@@ -2,14 +2,14 @@
 //   第一层：一句话（这周发了几条、多少播放、哪条最好）+ 七个平台各一行；
 //   第二层（?p=平台）：账号、这个平台的每条内容（最新的数），点开一条是它每次记录的数和小曲线；
 //   录入表单都折着，点「＋」才出现。符号代替文字：▶ 播放 ♥ 点赞 ✉ 评论 ↗ 转发 ★ 收藏 ＋ 涨粉。
-import { MEDIA_PLATFORMS, ago, fmtCount, fmtDateTime, mediaLabel } from '../domain.ts';
+import { MEDIA_PLATFORMS, ago, fmtCount, fmtDateTime, mediaLabel, stampOf } from '../domain.ts';
 import { METRICS, METRIC_LABEL, mediaOverview, postsOf, statsOf, type Metric, type MediaStat, type PostView } from '../services/media.ts';
 import { miniLine } from './components.ts';
 import { html, type Safe } from './html.ts';
 
 const SYM: Record<Metric, string> = { views: '▶', likes: '♥', comments: '✉', shares: '↗', saves: '★', followers: '＋' };
 
-const today = () => new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10);
+const today = () => stampOf().date;
 
 function nums(s: MediaStat | null, keys: Metric[] = ['views', 'likes', 'comments']): Safe {
   if (!s) return html`<span class="sym">还没记数</span>`;

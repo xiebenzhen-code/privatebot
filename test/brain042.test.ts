@@ -524,7 +524,8 @@ describe('042.2 回退与改派也守能力约束', () => {
     assert.equal(routed.json.route_read_only, 0);
 
     // 连着 codex 也不可用了（额度/离线），名单里只剩只读的 dsh——这时只能等你定。
-    await execSetting('codex', { enabled: false });
+    // 064：手上有事的执行者不能从设置页关掉（会 409）；这里要模拟的是「它不可用了」，直接改库。
+    D.db().prepare("UPDATE executor_settings SET enabled = 0 WHERE executor = 'codex'").run();
     const after = brain.fallbackRoute(await getTask(t.id), '模型超时了');
     assert.notEqual(after.executor, 'dsh', '写任务不能退回给只读执行者');
     assert.equal(after.executor, 'me', '没有能改文件的人，就留给人定');

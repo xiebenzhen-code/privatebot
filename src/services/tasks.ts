@@ -1,10 +1,14 @@
-import { db } from '../db.ts';
+import { db, tx } from '../db.ts';
+import { closeRun } from './runs.ts';
+import { cancelAsks } from './asks.ts';
 import { CATEGORIES, EXECUTORS, STATUSES, execLabel, nowIso, statusLabel, truncate } from '../domain.ts';
 import { HttpError, int, logEvent, oneOf, str } from './core.ts';
 import { redactAll } from './redact.ts';
 import { likePattern, searchTerms } from './search.ts';
 
 export type Task = {
+  /** 领取响应中的本次运行号；不是 tasks 表字段。 */
+  run_id?: number;
   id: number; title: string; description: string; category: string; executor: string;
   project: string; status: string; progress: number | null; step: string;
   session_id: string | null; session_url: string;
@@ -13,6 +17,14 @@ export type Task = {
   runner_id: string | null; runner_log: string; branch: string | null;
   tokens_used: number; start_requested: number;
   issue_url: string | null; issue_number: number | null;
+  /** 061：没成之后你点了「算了」的时间；空 = 没收起来。 */
+  dismissed_at: string | null;
+  /** 061.3：自动重试过几次（只对超时、断网这类自己能好的失败）。 */
+  auto_retries: number;
+  /** 062：审。见 services/review.ts。 */
+  reviewer: string; review_of: number | null; review_round: number; review_state: string; review_notes: string; review_why: string; verify: string;
+  /** 054.8: 外部来的原文（Issue 正文、Issue 里的修改意见）。只当资料：不进提示词，不进调度判断。 */
+  material: string;
   retry: 'merge' | 'push' | null; merged_commit: string | null;
   /** 017: which backend did the run (bailian / deepseek). Null for tasks no runner touched. */
   backend: string | null;
@@ -84,9 +96,9 @@ function whereOf(f: TaskFilter): { sql: string; args: (string | number)[] } {
   if (f.executor) { where.push('executor = ?'); args.push(f.executor); }
   if (f.category) { where.push('category = ?'); args.push(f.category); }
   for (const term of searchTerms(f.q)) {
-    where.push("(title LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\' OR result_text LIKE ? ESCAPE '\\')");
+    where.push("(title LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\' OR result_text LIKE ? ESCAPE '\\' OR material LIKE ? ESCAPE '\\')");
     const p = likePattern(term);
-    args.push(p, p, p);
+    args.push(p, p, p, p);
   }
   return { sql: where.length ? 'WHERE ' + where.join(' AND ') : '', args };
 }
@@ -254,6 +266,34 @@ export function updateTask(id: number, input: Record<string, unknown>, actor = '
     logEvent({ actor, kind: 'task.route_cleared', task_id: id, text: `T-${id} 你改了大脑的选择（原本派给 ${execLabel(before.executor)}），这单之后按你选的算` });
   }
   return getTask(id)!;
+}
+
+/** 054.8：外部资料只由导入通道写，不走 clean()——网页表单和脚本接口改不了它。 */
+export function setMaterial(id: number, text: string): void {
+  db().prepare('UPDATE tasks SET material = ?, updated_at = ? WHERE id = ?').run(String(text ?? '').slice(0, 20000), nowIso(), id);
+}
+
+/** 人工终止或确认失联时，任务与本次运行在同一事务收尾。 */
+export function stopTask(id: number, reason: string, actor = 'me'): Task {
+  return tx(() => {
+    const task = getTask(id);
+    if (!task) throw new HttpError(404, `没有任务 T-${id}`);
+    const children = db().prepare(`SELECT id FROM tasks WHERE review_of = ?
+      AND status NOT IN ('done', 'failed')`).all(id) as { id: number }[];
+    if (task.review_state === 'reviewing' || task.review_state === 'fixing') {
+      db().prepare("UPDATE tasks SET review_state = 'failed' WHERE id = ?").run(id);
+    }
+    for (const taskId of [id, ...children.map((c) => c.id)]) {
+      const why = taskId === id ? reason : '主任务已终止，审查停止';
+      closeRun(taskId, 'failed', { reason: why });
+      updateTask(taskId, { status: 'failed', step: why, fail_reason: why }, actor);
+      cancelAsks(taskId);
+      const expired = db().prepare("UPDATE approvals SET status = 'expired', decided_at = ? WHERE task_id = ? AND status = 'pending'").run(nowIso(), taskId);
+      if (expired.changes) logEvent({ actor, kind: 'approval.expired', task_id: taskId, text: `T-${taskId} 已停止，未批准的审批作废` });
+      logEvent({ actor, kind: 'task.stopped', task_id: taskId, text: `T-${taskId} 已停止本次运行` });
+    }
+    return getTask(id)!;
+  });
 }
 
 export function deleteTask(id: number, actor = 'me'): void {

@@ -9,6 +9,7 @@ import { createApproval } from './approvals.ts';
 import { tokensByExecutorSince } from './metrics.ts';
 import { listSlots } from './runs.ts';
 import { updateTask } from './tasks.ts';
+import { busyCount } from './crew.ts';
 
 export type ExecutorSetting = {
   executor: string; priority: number; categories: string; auto_allowed: number;
@@ -34,6 +35,12 @@ export function saveExecutorSettings(input: unknown): ExecutorSetting[] {
     const cats = Array.isArray(r.categories)
       ? r.categories.filter((c): c is string => typeof c === 'string' && CAT_KEYS.includes(c))
       : String(r.categories ?? '').split(',').map((c) => c.trim()).filter((c) => CAT_KEYS.includes(c));
+    // 064：从这里关掉一位，和首页「先歇着 / 移除」是同一件事——手上有事就不让关，不留旁路。
+    const was = db().prepare('SELECT enabled FROM executor_settings WHERE executor = ?').get(executor) as { enabled: number } | undefined;
+    if (was?.enabled && !flag(r.enabled, true) && executor !== 'me') {
+      const busy = busyCount(executor);
+      if (busy) throw new HttpError(409, `${execLabel(executor)} 手上还有 ${busy} 件事：等它做完，或者先把活换给别人`);
+    }
     db().prepare(`INSERT INTO executor_settings (executor, priority, categories, auto_allowed, daily_token_cap, max_concurrent, max_minutes, enabled)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(executor) DO UPDATE SET priority = excluded.priority, categories = excluded.categories,

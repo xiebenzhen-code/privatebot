@@ -134,6 +134,10 @@
     markBusy(sub);
     try {
       const data = await call(fill(form.dataset.api, body, true), form.dataset.method || 'POST', body);
+      // 派活回来只算「接住」：角色把卡收下去，但不写成完成——排队 ≠ 执行。
+      if (window.PrivateBot && data && data.id && /\/api\/tasks(\/quick)?$/.test(form.dataset.api) && (form.dataset.method || 'POST') === 'POST') {
+        window.PrivateBot.receive(data);
+      }
       const stay = markDone(sub);
       const msg = sub && sub.name === 'decision' ? `已${label}` : (form.dataset.toast || null);
       // 044：审批卡就地变色、写清批了什么（data-settle），让人看清了再收起，然后才刷新。
@@ -170,6 +174,8 @@
     try {
       const body = btn.dataset.body ? JSON.parse(btn.dataset.body) : null;
       const data = await call(btn.dataset.apiClick, btn.dataset.method || 'POST', body);
+      // 回包说 status=done 才是真完成；「开始」「重试」这类回包不触发庆祝。
+      if (window.PrivateBot && data && data.status === 'done') window.PrivateBot.succeed('这一单干完了');
       const stay = markDone(btn);
       holdFor(stay);
       if (stay) await wait(stay);
@@ -252,7 +258,12 @@
     if (holding()) { if (pendingReload) laterFlush(); return; }
     if (pendingReload) { flushPending(); return; }
     try {
-      const { v } = await call('/api/pulse', 'GET');
+      const snap = await call('/api/pulse', 'GET');
+      const v = snap && snap.v;
+      // 角色只关心「在跑几个 / 等你拍板几个」，跟着这次轮询一起回来；
+      // 页面不可见时上面已经 return 了，所以它天然跟着一起停。
+      // 包一层 try：角色是装饰，刷新决不能被它连累（没有 CustomEvent 的老环境就退回不动）。
+      try { document.dispatchEvent(new CustomEvent('wb:pulse', { detail: snap })); } catch (e) { /* 不影响刷新 */ }
       if (version && v !== version) {
         // 请求在路上这几十毫秒里可能刚点了按钮（inflight 归零、成功态开始），回来的这一刻再判一次。
         if (holding()) laterFlush();

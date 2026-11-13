@@ -206,7 +206,7 @@ Invoke-RestMethod -Uri http://localhost:3200/api/setup/status -Headers @{ Author
 | `detail` 说「地址或模型名不对」 | `--base-url` 少写或多写了 `/v1` | 地址写到 `/v1` **之前**，例如 `https://api.deepseek.com/anthropic` |
 | 清单里 `projects` 一直是 false | 执行器没在跑，或配置里没有项目 | 先跑执行器；没有项目就重跑 setup（不带 `--project` 会建 `~/ai-projects/first`） |
 | 清单里 `runner` 变回 false | 执行器窗口被关了，或机器睡眠 | 重新 `node scripts/runner-guard.mjs`；想开机自启见 `docs/INSTALL-WINDOWS.md` |
-| 敲了守卫，输出「另一个 runner 还活着…这次跳过」 | 已经有一个在跑（多半是开机自启那个） | 不用管，这个是正常的；要看输出就用原来那个窗口 |
+| 敲了守卫，输出「接手监护，不再起第二个」 | 已经有一个 runner 在跑（多半是开机自启那个） | 不用管：新守卫会接过来看，并请旧守卫让位，始终只有一个 runner |
 | PowerShell 说「无法将“node”项识别为…」 | Node 没装，或装完没重开终端 | 装 Node 22.18+，**重开** PowerShell 再试 |
 | 执行器窗口一闪就没了 | 缺依赖目录、或配置文件读不出来 | 在同一个窗口里跑 `npm run diagnose`，把输出发出来（已打码） |
 | 执行器说「门禁自检失败」 | 项目里有 `.claude/settings.json` | 删掉那个文件，或者换一个没有它的仓库 |

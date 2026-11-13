@@ -102,7 +102,7 @@ describe('046.3 · runInSandbox（假容器）', () => {
     const { o, gits } = base(f, { onLine: (l: string) => lines.push(l) });
     const r = await runInSandbox(o);
     assert.equal(r.problem, '');
-    assert.equal(r.patch, 'diff --git a/x b/x\n');
+    assert.equal(String(r.patch), 'diff --git a/x b/x\n'); // 062：成功时是原样字节（Buffer）
     assert.deepEqual(gits[0].slice(0, 3), ['/p', 'bundle', 'create']);
     assert.equal(gits[0].at(-1), 'main');
     assert.deepEqual(f.calls.map((c) => c[0]), ['create', 'copyIn', 'exec', 'exec', 'exec', 'copyOut', 'destroy']);

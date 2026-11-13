@@ -92,24 +92,23 @@ describe('016 · old addresses still work', () => {
 });
 
 describe('016 · navigation', () => {
-  test('the sidebar has four items, on every page', async () => {
+  test('061: no sidebar, no top bar; home has the crew row and gear, other pages lead back home', async () => {
     for (const path of ['/', '/tasks', '/tasks/review', '/team', '/data/audit', '/settings']) {
       const page = await api(path);
       assert.equal(page.status, 200, path);
-      assert.equal(navCount(page.text), 5, path);
+      assert.ok(!page.text.includes('id="wb-side"'), path);
+      assert.ok(!page.text.includes('class="shell-head"'), path);
+      if (path !== '/') assert.match(page.text, /<nav class="crumbs layer-crumbs"[^>]*><a href="\/">工作台<\/a>/, path);
     }
     const home = await api('/');
-    // 044：工作台 / 剧组 / 记录 / 设置；055 加了自媒体。任务那几页不在导航里，算在工作台下面。
-    for (const label of ['title="工作台"', 'title="剧组"', 'title="自媒体"', 'title="记录"', 'title="设置"']) {
-      assert.ok(home.text.includes(label), label);
-    }
+    assert.match(home.text, /data-crew-row/);
+    assert.match(home.text, /data-gear/);
   });
 
-  test('a new executor adds a filter and a card, not a sidebar row', async () => {
+  test('a new executor adds a filter and a card', async () => {
     domain.EXECUTORS.newbie = { label: '新来的', color: '#0891B2' };
     try {
       const tasks = await api('/tasks');
-      assert.equal(navCount(tasks.text), 5, 'still five (055 加了自媒体)');
       assert.ok(tasks.text.includes('executor=newbie'), 'board filter knows it');
       const team = await api('/team');
       assert.ok(team.text.includes('新来的'), 'team page shows a card');
@@ -125,7 +124,8 @@ describe('016 · navigation', () => {
     for (const [path, home] of [['/team/accounts', '/team'], ['/data/audit', '/data'], ['/data/machines', '/data']]) {
       const page = await api(path);
       assert.equal(page.status, 200, path);
-      assert.match(page.text, new RegExp(`<nav class="crumbs layer-crumbs"[^>]*><a href="${home}">`), path);
+      // 061.1：顶上先是「工作台 ›」，再是区名。
+      assert.match(page.text, new RegExp(`<nav class="crumbs layer-crumbs"[^>]*><a href="/">工作台</a><span aria-hidden="true">›</span><a href="${home}">`), path);
     }
     for (const path of ['/team', '/data']) assert.equal((await api(path)).status, 200, path);
     for (const path of paths) {
@@ -140,7 +140,7 @@ describe('016 · navigation', () => {
     for (const k of ['integrations', 'security', 'notify', 'appearance', 'backup']) {
       const page = await api(`/settings/${k}`);
       assert.equal(page.status, 200, k);
-      assert.match(page.text, /<nav class="crumbs layer-crumbs"[^>]*><a href="\/settings">设置<\/a>/, k);
+      assert.match(page.text, /<nav class="crumbs layer-crumbs"[^>]*><a href="\/">工作台<\/a><span aria-hidden="true">›<\/span><a href="\/settings">设置<\/a>/, k);
     }
   });
 
@@ -172,10 +172,9 @@ describe('016 · navigation', () => {
 });
 
 describe('016 · names follow 011', () => {
-  test('the crew preset renames the top-level item and the tabs', async () => {
+  test('the crew preset renames the tabs', async () => {
     await api('/api/labels', { method: 'POST', body: JSON.stringify({ preset: 'crew' }) });
     const team = await api('/team');
-    assert.ok(team.text.includes('title="剧组"'), 'nav item follows the preset');
     assert.ok(team.text.includes('预算表 ›'), 'accounts link follows the preset');
     const tasks = await api('/tasks');
     assert.ok(tasks.text.includes('>拍摄进度<'));
@@ -184,7 +183,6 @@ describe('016 · names follow 011', () => {
 
     await api('/api/labels', { method: 'POST', body: JSON.stringify({ preset: 'default' }) });
     const back = await api('/team');
-    assert.ok(back.text.includes('title="剧组"'), '040 起默认就叫剧组');
     assert.ok(back.text.includes('账号与额度 ›'));
   });
 });
@@ -224,12 +222,14 @@ describe('016 · what each page shows', () => {
     return r.json.id as number;
   };
 
-  test('badges count approvals and your own todos, approvals in the warning colour', async () => {
+  // 061.1：只有一个数——「等你」。审批和你自己的待办都是要你动手的事，合在一个徽标里。
+  // 061.1（用户 11-10 定的设计稿）：只有一个数——「等你」，挂在左上角回首页的头像上。审批算；你派给自己的待办不急，不算。
+  test('one number: 等你 (approvals count, your own todos do not)', async () => {
     await makeTask('归我管的', 'me');
     await api('/api/approvals', { method: 'POST', body: JSON.stringify({ title: '删文件', risk: 'medium', tool_name: 'Bash' }) });
     const page = await api('/');
-    assert.match(page.text, /nav-badge hot" aria-label="1 件待审批"/);
-    assert.match(page.text, /nav-badge" aria-label="1 件你的待办"/);
+    assert.match(page.text, /等你<span class="flow-n"> · 1</);
+    assert.match(page.text, /你的待办 · 1/);
   });
 
   test('the board no longer holds finished work, and 已完成 pages through it', async () => {

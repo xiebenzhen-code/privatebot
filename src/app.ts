@@ -10,23 +10,23 @@ import {
   authOf, checkPassword, checkToken, clearCookie, createSession, destroySession, loginBlocked, loginFailed, loginOk,
   passwordProblem, sameOrigin, sessionCookieFor, sessionIdOf,
 } from './auth.ts';
-import { crewPreset, execLabel, fmtDateTime, labels, saveLabels } from './domain.ts';
+import { EXECUTORS, crewPreset, execLabel, fmtDateTime, labels, nowIso, saveLabels } from './domain.ts';
 import { HttpError, listEvents, logEvent } from './services/core.ts';
 import {
   createApproval, createRule, decideApproval, deleteRule, expireApproval, getApproval, handleClaudeHook,
   listApprovals, listRules, updateRule,
 } from './services/approvals.ts';
 import {
-  calibrateVoucher, deleteAccount, deleteMachine, heartbeat, ingestUsage, listAccounts, listMachines, periodStats, pulse, upsertAccount,
+  botSnapshot, calibrateVoucher, deleteAccount, deleteMachine, heartbeat, ingestUsage, listAccounts, listMachines, periodStats, pulse, upsertAccount,
 } from './services/metrics.ts';
-import { createTask, deleteTask, getTask, listTasks, updateTask } from './services/tasks.ts';
+import { createTask, deleteTask, getTask, listTasks, stopTask, updateTask, type Task } from './services/tasks.ts';
 import {
   autoPaused, evaluateTaskBudget, getSetting, listExecutorSettings, nextRunnableTask,
   quotaBlock, saveExecutorSettings, setAutoPaused, setSetting, suggestExecutor,
 } from './services/dispatch.ts';
 import { addChannel, deleteChannel, listChannels, maskUrl, notify, notifyApproval, notifyStaleBranches, notifyTaskAsk, notifyTaskResult, sendTest } from './services/notify.ts';
 import { EXCLUDED, listSources, redactText, setSourceOff } from './services/sources.ts';
-import { claimTask, expectHandoff, finishTask, heartbeat as runnerHeartbeat, listRunners, reportProgress, runnerExecutors } from './services/runner.ts';
+import { claimTask, expectHandoff, finishTask, heartbeat as runnerHeartbeat, listRunners, reportProgress, runnerExecutors, staleRunReport } from './services/runner.ts';
 import { createSlot, listRuns, listSlots, orderedSlots, updateSlot } from './services/runs.ts';
 import { answerAsk, cancelAsks, hasAnswered, listAsks, openAsk, takeResume } from './services/asks.ts';
 import { commentOnTask, finishComment, githubRepos, importIssues, pushComment, recordGithubSync } from './services/github.ts';
@@ -51,6 +51,12 @@ import {
 } from './services/exposure.ts';
 import { dataPage, type DataTab } from './views/data.ts';
 import { mediaPage } from './views/media.ts';
+import { advancedPage, streamPage } from './views/stream.ts';
+import { crewAddPanel, crewPanel } from './views/crew.ts';
+import { setCrew } from './services/crew.ts';
+import { packsPage } from './views/packs.ts';
+import { addSay, resolveReview } from './services/review.ts';
+import { activePacks, disablePack, enablePack } from './services/packs.ts';
 import { addStats, createPost, deletePost, setAccount } from './services/media.ts';
 import { html, type Safe } from './views/html.ts';
 import { layout } from './views/layout.ts';
@@ -135,8 +141,17 @@ const baseUrlOf = (c: Ctx) => `${(c.req.headers['x-forwarded-proto'] as string |
 on('GET', '/', (c) => {
   const old = oldPath(c.url);
   if (old) return { redirect: old };
-  return page(c, '工作台', 'today', undefined, overviewPage(c.url.searchParams));
+  // 061.1：首页是一条流。原来的四行首页还在 /?view=classic，旧的分组地址（/?g=you 之类）照旧打开它。
+  const q = c.url.searchParams;
+  if (q.get('view') === 'classic' || q.has('g')) return page(c, '工作台', 'today', undefined, overviewPage(q));
+  // 061.2：首页带 ?task= 时，那件事在右边（手机上盖上来）以线程打开，不再滑旧抽屉。
+  const open = Number(q.get('task')) ? getTask(Number(q.get('task'))) : undefined;
+  // 064：点头像 / 点「＋」——那位执行者（或「请谁进来」）在同一个位置打开。
+  const who = open ? '' : (q.get('crew') ?? '');
+  const side = who === 'add' ? crewAddPanel() : who ? crewPanel(who) : null;
+  return { html: layout({ title: open ? open.title : '工作台', section: 'today', body: streamPage(Date.now(), open, side, themeOf(c.req)), assetVersion: ASSET_VERSION, theme: themeOf(c.req) }) };
 }, { page: true });
+on('GET', '/advanced', (c) => page(c, '高级', 'today', undefined, advancedPage()), { page: true });
 on('GET', '/tasks', (c) => sectionRoute(c, 'tasks', null, (tab) => tasksPage(c.url.searchParams, tab as TaskTab).body), { page: true });
 on('GET', '/tasks/:tab', (c) => sectionRoute(c, 'tasks', c.params[0], (tab) => tasksPage(c.url.searchParams, tab as TaskTab).body), { page: true });
 on('GET', '/team', (c) => sectionRoute(c, 'team', null, (tab) => teamPage(c.url.searchParams, tab as TeamTab)), { page: true });
@@ -166,7 +181,7 @@ on('GET', '/manifest.webmanifest', () => ({
     scope: '/',
     display: 'standalone',
     background_color: '#F4F4F0',
-    theme_color: '#18181B',
+    theme_color: '#1E5B4A',
     icons: [
       { src: '/static/icon-192.png', sizes: '192x192', type: 'image/png' },
       { src: '/static/icon-512.png', sizes: '512x512', type: 'image/png' },
@@ -196,7 +211,9 @@ on('POST', '/logout', (c) => {
 
 // ---------- API ----------
 on('GET', '/api/health', () => ({ json: { ok: true } }), { public: true });
-on('GET', '/api/pulse', () => ({ json: { v: pulse() } }));
+// v 还是那个版本号（谁变了谁刷新）；bot 是顺路带回来的角色快照，只读两个计数，
+// 让角色不必自己再开一条轮询——页面不可见时 app.js 本来就不轮询了。
+on('GET', '/api/pulse', () => ({ json: { v: pulse(), bot: botSnapshot() } }));
 
 on('GET', '/api/tasks', (c) => {
   const q = c.url.searchParams;
@@ -223,11 +240,24 @@ on('POST', '/api/tasks', (c) => {
 on('POST', '/api/settings/hint-closed', () => { setSetting('wb_hint_closed', '1'); return { json: { ok: true } }; }, { human: true });
 // 044：顶部一句话派活。只收「做什么 / 哪个项目 / 只要回答」，执行者不在这里选：
 // 大脑开着就交给大脑，关着就用规则推荐（和新建任务表单里那句「建议：…」是同一个推荐）。
-on('POST', '/api/tasks/quick', (c) => {
-  const body = (c.body ?? {}) as Record<string, unknown>;
-  const title = String(body.title ?? '').trim();
+/** 061：一句话派活。派活框、包的按钮都走这里。 */
+function quickTask(body: Record<string, unknown>, who: string): Task {
+  let title = String(body.title ?? '').trim();
+  // 061：派活框只有一行。「@名字」= 指定谁来做（名字或代号都行），从这句话里拿掉。
+  const at = /(?:^|\s)@([^\s@]{1,20})/.exec(title);
+  if (at && !body.pick_executor) {
+    const want = at[1].toLowerCase();
+    const hit = Object.keys(EXECUTORS).find((k) => k !== 'me' && (k === want || execLabel(k).toLowerCase() === want));
+    if (hit) { body.pick_executor = hit; title = title.replace(at[0], ' ').replace(/\s+/g, ' ').trim(); }
+  }
   if (!title) throw new HttpError(400, '先写一句让它做什么');
   projectFromBody(body);
+  // 061：不选项目就用上一次用的那个；没有就用执行器报上来的第一个。
+  if (!String(body.project ?? '').trim()) {
+    const known = latestRunnerMeta().projects ?? [];
+    const last = (db().prepare("SELECT project FROM tasks WHERE project != '' ORDER BY id DESC LIMIT 1").get() as { project: string } | undefined)?.project;
+    body.project = last && (!known.length || known.includes(last)) ? last : (known[0] ?? '');
+  }
   const project = String(body.project ?? '').trim();
   const answerOnly = body.answer_only === true || body.answer_only === '1' || body.answer_only === 'on';
   const category = String(body.category ?? '') || 'dev';
@@ -246,9 +276,34 @@ on('POST', '/api/tasks/quick', (c) => {
   }
   if (!project && input.executor !== 'me') throw new HttpError(400, '选一个项目：它得知道去哪个文件夹干活');
   if (!project && input.route === 'brain') throw new HttpError(400, '选一个项目：它得知道去哪个文件夹干活');
-  const task = createTask(input, actor(c));
+  const task = createTask(input, who);
+  // 062：谁来审。默认大脑 / 规则挑一位不是干活的；只读的活、派给自己的活不审。大脑派的活等派定了人再挑（见 routeTask）。
+  if (!answerOnly && input.executor !== 'me') {
+    const pick = resolveReview(body.reviewer, String(input.executor), runnerExecutors());
+    if (pick.who) db().prepare('UPDATE tasks SET reviewer = ?, review_why = ? WHERE id = ?').run(pick.who, pick.why, task.id);
+  } else if (input.route === 'brain' && !answerOnly) {
+    db().prepare('UPDATE tasks SET reviewer = ? WHERE id = ?').run(String(body.reviewer ?? 'auto') === 'none' ? '' : String(body.reviewer ?? 'auto').slice(0, 40), task.id);
+  }
+  return getTask(task.id)!;
+}
+on('POST', '/api/tasks/quick', (c) => ({ json: quickTask((c.body ?? {}) as Record<string, unknown>, actor(c)), status: 201 }));
+// 060.2：包。启用 / 关闭 / 点按钮都只许人点；按钮派出去的是一件普通的事，走正常的点头。
+on('GET', '/advanced/packs', (c) => page(c, '包', 'today', undefined, packsPage()), { page: true });
+on('POST', '/api/packs/:name/enable', (c) => ({ json: enablePack(String(c.params[0]), String(c.body?.hash ?? ''), 'me') }), { human: true });
+on('POST', '/api/packs/:name/disable', (c) => { disablePack(String(c.params[0]), 'me'); return { json: { ok: true } }; }, { human: true });
+on('POST', '/api/packs/:name/actions/:id', (c) => {
+  const pack = activePacks().find((p) => p.name === String(c.params[0]));
+  const act = pack?.actions[Number(c.params[1])];
+  if (!pack || !act) throw new HttpError(404, '这个包没启用，或者没有这个按钮');
+  // {输入} 只填你当场敲的字：去掉看不见的字符，压成一行，限长。
+  const typed = String(c.body?.input ?? '').replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2060-\u2069\ufeff]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 500);
+  if (act.input === 'required' && !typed) throw new HttpError(400, '先写一句');
+  const body: Record<string, unknown> = { title: typed ? `${act.label}：${typed}`.slice(0, 120) : act.label, description: act.prompt.replaceAll('{输入}', typed) };
+  if (act.executor !== 'any') body.pick_executor = act.executor;
+  const task = quickTask(body, 'me');
+  logEvent({ actor: 'me', kind: 'pack.action', task_id: task.id, text: `用包「${pack.label}」的按钮「${act.label}」派了 T-${task.id}` });
   return { json: task, status: 201 };
-});
+}, { human: true });
 on('GET', '/api/tasks/:id', (c) => {
   const t = getTask(idOf(c));
   if (!t) throw new HttpError(404, '没有这个任务');
@@ -412,12 +467,17 @@ on('POST', '/api/tasks/first-run', (c) => {
 on('GET', '/api/runner/next', (c) => {
   const execs = (c.url.searchParams.get('executors') ?? '').split(',').map((s) => s.trim()).filter(Boolean);
   const runnerId = (c.url.searchParams.get('runner') ?? 'runner').slice(0, 80);
-  const task = claimTask(execs, runnerId);
+  const notReady = (c.url.searchParams.get('not_ready') ?? '').split(',').filter(Boolean);
+  const busyCoding = [...new Set((c.url.searchParams.get('busy') ?? '').split(',').map(Number)
+    .filter((id) => Number.isSafeInteger(id) && id > 0))].slice(0, 100);
+  const task = claimTask(execs, runnerId, notReady, busyCoding);
   if (task) void commentOnTask(task, `执行器已开始干活（T-${task.id}）。`);
   // 045：顺手带上这个执行者能用的账号槽（排好序，执行器取第一个）。只有目录名，没有凭据。
   const slots = task ? orderedSlots(task.executor).map((s) => ({ name: s.name, slot_dir: s.slot_dir })) : [];
   // 055.2：你回答过提问、回答还没被取走，就告诉执行器这次是接着干（它再来 POST /resume 取回答）。
-  return task ? { json: { ...task, slots, resume: hasAnswered(task.id) } } : { json: null, status: 204 };
+  // 062：这件事是在审别人的——告诉执行器被审的是哪条分支，它会把改动写成补丁文件递进去。
+  const reviewBranch = task?.review_of ? String(getTask(task.review_of)?.branch ?? '') : '';
+  return task ? { json: { ...task, slots, resume: hasAnswered(task.id), ...(/^wb\/T-\d+(-\d{1,2})?$/.test(reviewBranch) ? { review_branch: reviewBranch } : {}) } } : { json: null, status: 204 };
 });
 on('GET', '/api/runner/slots', (c) => ({
   json: orderedSlots(String(c.url.searchParams.get('executor') ?? '')).map((s) => ({ name: s.name, slot_dir: s.slot_dir })),
@@ -632,13 +692,58 @@ on('POST', '/api/tasks/:id/restart', (c) => {
   if (!t) throw new HttpError(404, '没有任务');
   assertProjectForAgent(t.executor, t.project);
   cancelAsks(t.id, ['open']); // 055.2：重新开始是全新的一次，没答的卡作废
+  undismiss(t.id);
   return { json: updateTask(t.id, {
     status: 'queued', start_requested: 1, retry: null, fail_reason: null, step: '重新排队，等执行器领取',
   }, actor(c)) };
 }, { human: true });
+// 061：没成之后的三个办法，和「回一句话让它改」。都只许人点。
+const againFields = { status: 'queued', start_requested: 1, retry: null, fail_reason: null } as const;
+// 你亲手让它再来：收起来的放出来，自动重试的次数清零。
+const undismiss = (id: number) => { db().prepare('UPDATE tasks SET dismissed_at = NULL, auto_retries = 0 WHERE id = ?').run(id); };
+// 064：执行者请进来 / 先歇着 / 移除。只有你能动队伍，脚本令牌不行。
+on('POST', '/api/crew/:key', (c) => {
+  const to = String(c.body?.to ?? '');
+  if (to !== 'in' && to !== 'rest' && to !== 'out') throw new HttpError(400, '要做什么：in / rest / out');
+  return { json: setCrew(String(c.params[0] ?? ''), to, actor(c)) };
+}, { human: true });
+on('POST', '/api/tasks/:id/dismiss', (c) => {
+  const t = getTask(idOf(c));
+  if (!t) throw new HttpError(404, '没有任务');
+  if (t.status !== 'failed') throw new HttpError(400, '只有没成的事才能收起来');
+  db().prepare('UPDATE tasks SET dismissed_at = ? WHERE id = ?').run(nowIso(), t.id);
+  logEvent({ actor: actor(c), kind: 'task.dismissed', task_id: t.id, text: `T-${t.id} 没成，你选了「算了」` });
+  return { json: getTask(t.id) };
+}, { human: true });
+on('POST', '/api/tasks/:id/handover', (c) => {
+  const t = getTask(idOf(c));
+  if (!t) throw new HttpError(404, '没有任务');
+  if (t.status === 'running') throw new HttpError(400, '它还在做，先等它停下');
+  const to = String(c.body?.executor ?? '');
+  const ok = db().prepare("SELECT 1 FROM executor_settings WHERE executor = ? AND enabled = 1 AND executor != 'me'").get(to);
+  if (!ok || to === t.executor) throw new HttpError(400, '换不了：这位执行者没开，或者就是原来那位');
+  assertProjectForAgent(to, t.project);
+  cancelAsks(t.id, ['open']);
+  undismiss(t.id);
+  return { json: updateTask(t.id, { ...againFields, executor: to, route: '', step: `换 ${execLabel(to)} 来做，等执行器领取` }, actor(c)) };
+}, { human: true });
+on('POST', '/api/tasks/:id/reply', (c) => {
+  const t = getTask(idOf(c));
+  if (!t) throw new HttpError(404, '没有任务');
+  const text = String(c.body?.text ?? '').trim().slice(0, 2000);
+  if (!text) throw new HttpError(400, '先写一句话');
+  if (t.status === 'running') throw new HttpError(400, '它还在做，等它停下再说');
+  if (t.status === 'asking') throw new HttpError(400, '它在等你选，先回答上面的问题');
+  if (t.executor !== 'me') assertProjectForAgent(t.executor, t.project);
+  cancelAsks(t.id, ['open']);
+  undismiss(t.id);
+  // 你说的话是指令：接在说明后面，下一轮它会读到。
+  addSay(t.id, 'me', text);
+  const description = `${t.description}\n\n---\n你后来补的：${text}`.trim().slice(0, 10000);
+  return { json: updateTask(t.id, { ...againFields, description, step: '按你说的重做，等执行器领取' }, actor(c)) };
+}, { human: true });
 on('POST', '/api/tasks/:id/stop', (c) => {
-  const task = updateTask(idOf(c), { status: 'failed', step: '用户终止了任务' }, actor(c));
-  cancelAsks(task.id); // 055.2：终止之后，没答的卡和没取走的回答都作废
+  const task = stopTask(idOf(c), '用户终止了任务', actor(c));
   return { json: task };
 }, { human: true });
 // 018: a run that stopped reporting is not coming back. The task keeps saying "running" forever
@@ -660,7 +765,7 @@ on('POST', '/api/tasks/:id/mark-failed', (c) => {
   if (t.status !== 'running') throw new HttpError(400, '只有运行中的任务需要这样标记，其它状态直接改状态就行');
   const stuck = stuckFor(t);
   const why = stuck ? `${stuck.minutes} 分钟没有进度更新` : '执行器那边没有回应';
-  return { json: updateTask(t.id, { status: 'failed', step: `看起来卡住了（${why}），你标记为失败` }, actor(c)) };
+  return { json: stopTask(t.id, `看起来卡住了（${why}），你标记为失败`, actor(c)) };
 }, { human: true });
 // 013.6: a merge blocked by a dirty/behind repo, or a push that lost the network, is retried
 // without paying for the coding run again — the branch and the local merge are still there.
@@ -680,6 +785,8 @@ on('POST', '/api/tasks/:id/retry-push', (c) => {
   return { json: updateTask(t.id, { status: 'queued', start_requested: 1, retry: 'push', step: '执行器会重试推送，等它领取' }, actor(c)) };
 }, { human: true });
 on('POST', '/api/runner/tasks/:id/budget', (c) => {
+  const task = getTask(idOf(c));
+  if (task && staleRunReport(task, c.body?.run_id)) return { json: { gated: false, ignored: true } };
   const r = evaluateTaskBudget(idOf(c), c.body ?? {});
   if (r.gated && r.approval_id) void notifyApproval(getApproval(r.approval_id));
   if (r.gated) void commentOnTask(getTask(idOf(c))!, '触发了预算闸，任务暂停，等工作台决定继续还是终止。');
@@ -737,7 +844,7 @@ on('POST', '/api/events', (c) => {
 on('GET', '/api/events.csv', () => {
   const rows = listEvents({ limit: 500 });
   const q = (s: unknown) => `"${String(s ?? '').replace(/"/g, '""')}"`;
-  const csv = '﻿时间,操作者,类型,任务,内容\n' + rows.map((e) => [fmtDateTime(e.ts), e.actor, e.kind, e.task_id ? `T-${e.task_id}` : '', e.text].map(q).join(',')).join('\n');
+  const csv = '\ufeff时间,操作者,类型,任务,内容\n' + rows.map((e) => [fmtDateTime(e.ts), e.actor, e.kind, e.task_id ? `T-${e.task_id}` : '', e.text].map(q).join(',')).join('\n');
   return { text: csv, type: 'text/csv; charset=utf-8', filename: 'workbench-audit.csv' };
 }, { human: true });
 

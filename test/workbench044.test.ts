@@ -68,15 +68,17 @@ describe('044 · 一句话派活', () => {
     assert.equal(r.json.answer_only, 1);
   });
 
-  test('没写话、没选项目：说人话拒绝，不建任务', async () => {
+  test('没写话：说人话拒绝；没选项目：用上一次用的那个（061）', async () => {
     const before = (db().prepare('SELECT COUNT(*) n FROM tasks').get() as { n: number }).n;
     const a = await api('/api/tasks/quick', { method: 'POST', token: null, body: { title: '   ', project: 'demo-feed' } });
     assert.equal(a.status, 400);
     assert.match(a.json.error, /写一句/);
-    const b = await api('/api/tasks/quick', { method: 'POST', token: null, body: { title: '做点什么' } });
-    assert.equal(b.status, 400);
-    assert.match(b.json.error, /项目/);
     assert.equal((db().prepare('SELECT COUNT(*) n FROM tasks').get() as { n: number }).n, before);
+    // 061（设计稿 11-10）：派活框只有一行，不再让人选项目。
+    const last = (db().prepare("SELECT project FROM tasks WHERE project != '' ORDER BY id DESC LIMIT 1").get() as { project: string } | undefined)?.project;
+    const b = await api('/api/tasks/quick', { method: 'POST', token: null, body: { title: '做点什么' } });
+    if (last) { assert.equal(b.status, 201); assert.equal(b.json.project, last); db().prepare('DELETE FROM tasks WHERE id = ?').run(b.json.id); }
+    else { assert.equal(b.status, 400); assert.match(b.json.error, /项目/); }
   });
 
   test('大脑开着时交给大脑：先落在「我」名下等派单', async () => {
@@ -102,20 +104,20 @@ describe('044 · 派活框的「更多」', () => {
     assert.equal(r.json.category, 'ops');
     assert.equal(r.json.description, '跑一下构建');
   });
-  test('页面上的「更多」是就地弹出的小卡片，不再跳去任务页', async () => {
+  test('061：派活框只有一行，没有「更多」和跳去任务页的链接', async () => {
     const html = (await api('/', { token: null })).text;
-    assert.match(html, /<details class="ask-more">/);
-    assert.doesNotMatch(html, /class="ask-more" href="\/tasks\?new=1"/);
+    assert.doesNotMatch(html, /class="ask-more"/);
+    assert.match(html, /<button class="send" aria-label="派出去">/);
   });
 });
 
 describe('044 · 第一次打开的说明', () => {
   test('有一行说明，点「知道了」之后不再出现', async () => {
-    const before = await api('/', { token: null });
+    const before = await api('/?view=classic', { token: null });
     assert.match(before.text, /data-first-hint/);
     const r = await api('/api/settings/hint-closed', { method: 'POST', token: null });
     assert.equal(r.status, 200);
-    const after = await api('/', { token: null });
+    const after = await api('/?view=classic', { token: null });
     assert.doesNotMatch(after.text, /data-first-hint/);
   });
 });

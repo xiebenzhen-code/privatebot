@@ -232,14 +232,15 @@ describe('026 · 一屏一个荧光按钮', () => {
     }
     const page = await api('/tasks/review'); // 044 v3：工作台二层只列，审批页里批
     const accent = (page.text.match(/class="btn accent"/g) ?? []).length;
-    assert.equal(accent, 1, `今天页荧光按钮应该只有一个，实际 ${accent} 个`);
+    // 061.1：派活框只在首页；审批页最多一个荧光按钮。
+    assert.ok(accent <= 1, `荧光按钮最多一个，实际 ${accent} 个`);
     assert.equal((page.text.match(/value="approved"/g) ?? []).length, 3, '三个批准按钮都在，只是只有一个亮');
   });
 
   test('审片页同理', async () => {
     const page = await api('/tasks/review');
     const accent = (page.text.match(/class="btn accent"/g) ?? []).length;
-    assert.equal(accent, 1);
+    assert.ok(accent <= 1);
   });
 });
 

@@ -8,7 +8,7 @@ import { startBalances } from './services/balances.ts';
 import { startBackup } from './services/backup.ts';
 import { startDigest } from './services/digest.ts';
 import { startHandoffWatch } from './services/runner.ts';
-import { scrubRuns } from './services/runs.ts';
+import { reconcileRuns, scrubRuns } from './services/runs.ts';
 
 if (!authConfigured()) {
   console.error('缺少 WB_TOKEN（至少 12 位）。生成一个：  openssl rand -hex 24\n仅本机调试可设 WB_NO_AUTH=1。');
@@ -28,6 +28,7 @@ if (!AUTH_DISABLED) {
 
 db(); // open + migrate before accepting traffic
 scrubRuns(); // 045.2：补打码第一版留下的运行原因（幂等）
+reconcileRuns();
 
 // 015.3: a changed WB_PASSWORD must invalidate every browser that is still logged in.
 const fp = syncPasswordFingerprint();

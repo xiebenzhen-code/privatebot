@@ -125,6 +125,18 @@ export function scrubRuns(): number {
 }
 
 // ───────────────────────────── 账号槽 ─────────────────────────────
+/** 升级启动时修补终态任务留下的旧 running 记录；不猜仍在执行的任务。 */
+export function reconcileRuns(): number {
+  const result = db().prepare(`UPDATE runs SET
+    outcome = (SELECT CASE WHEN t.status = 'done' THEN 'done' ELSE 'failed' END FROM tasks t WHERE t.id = runs.task_id),
+    ended_at = COALESCE((SELECT completed_at FROM tasks WHERE id = runs.task_id), ?),
+    reason = COALESCE(reason, '任务已结束，启动核对补收尾')
+    WHERE outcome = 'running' AND task_id IN (SELECT id FROM tasks WHERE status IN ('done', 'failed'))`).run(nowIso());
+  const n = Number(result.changes);
+  if (n) logEvent({ actor: 'system', kind: 'runs.reconciled', text: `为 ${n} 条已结束任务的旧运行补收尾` });
+  return n;
+}
+
 
 export type Slot = {
   name: string;

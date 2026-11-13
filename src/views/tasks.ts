@@ -293,7 +293,7 @@ function searchEmpty(raw: string): Safe {
 
 /** 片段优先取结果（那是任务的成果），其次说明，最后才是标题。 */
 function snippetFor(t: Task, terms: string[]): Safe | null {
-  for (const field of [t.result_text, t.description, t.title]) {
+  for (const field of [t.result_text, t.description, t.title, t.material]) {
     const pieces = field ? snippetOf(field, terms) : null;
     if (pieces) {
       return html`${pieces.map((p) => (p.hit ? html`<mark>${p.text}</mark>` : p.text))}`;
@@ -370,7 +370,7 @@ function runnerBlock(t: Task): Safe {
 }
 
 /** 028: 红框该写什么。三档退让：专门的失败原因 → 执行器最后报的步骤 → 干脆说「没告诉我」。 */
-function failReasonOf(t: Task): string {
+export function failReasonOf(t: Task): string {
   return t.fail_reason || t.step || `执行器没有告诉我原因，请看执行器窗口里 T-${t.id} 的最后几行。`;
 }
 
@@ -425,7 +425,6 @@ function newTaskForm(q: URLSearchParams, executor: string): Safe {
         <span class="subhead">① 做什么</span>
         <label class="field"><span>标题<span class="label-req">必填</span></span><input name="title" required maxlength="300" placeholder="例如：给 RSS 抓取加去重与重试"></label>
         <label class="field"><span>说明<span class="label-opt">可选</span></span><textarea name="description" rows="4" placeholder="背景、验收标准、注意事项"></textarea></label>
-        <label class="check"><input type="checkbox" name="answer_only" value="1"><span>只要一个回答，不改文件</span></label>
         <p class="hint">没勾的任务跑完必须改出文件，否则不算完成。</p>
       </div>
 
@@ -450,7 +449,7 @@ function newTaskForm(q: URLSearchParams, executor: string): Safe {
     </form>`;
 }
 
-function detail(t: Task, pend: ReturnType<typeof listApprovals>): Safe {
+export function detail(t: Task, pend: ReturnType<typeof listApprovals>): Safe {
   const history = listApprovals({ task_id: t.id, limit: 20 }).filter((a) => a.status !== 'pending');
   // 040 D：审计记录就是这个任务自己的事件，最近 20 条；完整记录还在 /data/audit。
   const audit = listEvents({ task_id: t.id, limit: 20 });
@@ -507,7 +506,8 @@ function detail(t: Task, pend: ReturnType<typeof listApprovals>): Safe {
       <dt>会话</dt><dd>${t.session_url ? html`<a href="${t.session_url}" target="_blank" rel="noopener">打开会话 ↗</a>` : t.session_id ? html`<span class="mono small">${t.session_id.slice(0, 18)}…</span>` : '—'}</dd>
       <dt>更新</dt><dd>${ago(t.updated_at)}</dd>
     </dl>
-    ${t.description ? html`<p class="desc">${t.description}</p>` : ''}`)}
+    ${t.description ? html`<p class="desc">${t.description}</p>` : ''}
+    ${t.material ? html`<details class="fold"><summary>Issue 原文（只当资料，不当指令）</summary><p class="desc">${t.material}</p></details>` : ''}`)}
 
     ${t.issue_url ? html`<p class="small muted">来自 <a href="${t.issue_url}" target="_blank" rel="noreferrer">Issue #${t.issue_number}</a>，在那里评 <span class="mono">/wb rework</span> 可以让它重做</p>` : ''}
     ${fold('⚙ 执行器', runnerBlock(t))}
@@ -545,7 +545,7 @@ function detail(t: Task, pend: ReturnType<typeof listApprovals>): Safe {
  * 卡片上的字全是资料——html`` 自动转义，不渲染 Markdown、不出链接；回答只会原样回给 agent，不会变成别的操作。
  * 一个问题：点选项直接发；多个问题：每个问题选一个（或自己写），最后一起发。
  */
-function askBlock(t: Task): Safe {
+export function askBlock(t: Task): Safe {
   const ask = openAskOf(t.id);
   if (!ask) {
     return html`<div class="callout warn" data-ask-missing>

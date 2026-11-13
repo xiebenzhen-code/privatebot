@@ -11,26 +11,29 @@
   --muted: #5F5E58;
   --faint: #6B6A64;
   --chip: #F1F0EA;
-  --accent: #D7F25A;
-  --accent-soft: #EEF8C4;
+  --accent: #D3E6DC; /* 2026-11-12 用户：黄绿在米白底上晃眼；蓝试过不好看；定松绿。大面积的底用浅松绿，小点用 --accent-strong */
+  --accent-soft: #E7F1EC;
+  --accent-strong: #1E5B4A;
+  --on-strong: #FFFFFF;
+  --offline-dot: #C4552D; /* 执行者开着、但不在线 */
   /* 026: 荧光黄绿只做填充（白底上对比度 1.25:1，不能当字色）。要「吸引人的彩色字」用这支同色系深绿。 */
-  --accent-ink: #3B5200;
-  --warn: #3D4A0E;
-  --warn-bg: #FBFDEB;
-  --warn-soft: #F4F9D6;
-  --warn-line: #D7F25A;
+  --accent-ink: #0E3328;
+  --warn: #0E3328;
+  --warn-bg: #F3F8F5;
+  --warn-soft: #E7F1EC;
+  --warn-line: #A9CDBD;
   --hot: #1A1A17;
   --danger: #1A1A17;
-  --danger-bg: #EEF5C9;
+  --danger-bg: #E7F1EC;
   --ok: #55554D;
   --ok-bg: #EFEFEA;
   --ok-dot: #C9C9C0;
-  --info: #4A5A12;
-  --info-bg: #F4F8E0;
+  --info: #0E3328;
+  --info-bg: #EFF6F2;
   /* 044：深浅两套共用的「实心块」——浅色里是墨色块配白字，深色里是浅色块配墨字。 */
   --on-accent: #18181B; /* 荧光底上的字：深浅色都用墨色 */
   --solid: #18181B;
-  --solid-icon: #D7F25A; /* 实心块里的图标：浅色里是墨底荧光，深色里是浅底橄榄绿 */
+  --solid-icon: #9CCDB8; /* 实心块里的图标：浅色里是墨底浅蓝，深色里是浅底深蓝 */
   --brand-bg: #18181B;
   --on-solid: #FFFFFF;
   --on-avatar: #FFFFFF; /* 执行者头像上的字：底色是执行者自己的颜色，深浅色都用白字 */
@@ -73,11 +76,11 @@
 :root[data-theme="dark"] {
   --bg: #0F0F11; --panel: #18181B; --panel-2: #141416; --line: #2A2A30; --line-strong: #3A3A42;
   --ink: #F4F4F0; --ink-2: #D4D4D8; --muted: #A1A1AA; --faint: #8E8E97; --chip: #26262B;
-  --accent: #D7F25A; --accent-soft: #2B3410; --accent-ink: #D7F25A;
-  --warn: #D7F25A; --warn-bg: #22270F; --warn-soft: #2A3012; --warn-line: #5C6B1E; --hot: #D7F25A;
-  --danger: #F4F4F0; --danger-bg: #2F3714; --ok: #A1A1AA; --ok-bg: #232327; --ok-dot: #52525B;
-  --info: #C6E04A; --info-bg: #1C2010;
-  --solid: #F4F4F0; --on-solid: #18181B; --on-hot: #18181B; --solid-icon: #3B5200; --brand-bg: #26262B;
+  --accent: #9CCDB8; --accent-soft: #16302A; --accent-ink: #9CCDB8; --accent-strong: #5FB392; --on-strong: #0B2A21; --offline-dot: #E0714A;
+  --warn: #9CCDB8; --warn-bg: #12241F; --warn-soft: #16302A; --warn-line: #2C5A4B; --hot: #9CCDB8;
+  --danger: #F4F4F0; --danger-bg: #16302A; --ok: #A1A1AA; --ok-bg: #232327; --ok-dot: #52525B;
+  --info: #9CCDB8; --info-bg: #111F1B;
+  --solid: #F4F4F0; --on-solid: #18181B; --on-hot: #18181B; --solid-icon: #0E3328; --brand-bg: #26262B;
   --track: #2A2A30; --offline: #52525B; --scrim: rgba(0, 0, 0, .5);
   --code-bg: #0B0B0D; --code-fg: #E7E5DF; --code-btn: #26262B; --seg-count: rgba(24, 24, 27, .22);
   --hover-ink: #FFFFFF;
@@ -89,11 +92,11 @@
   :root:not([data-theme]) {
     --bg: #0F0F11; --panel: #18181B; --panel-2: #141416; --line: #2A2A30; --line-strong: #3A3A42;
     --ink: #F4F4F0; --ink-2: #D4D4D8; --muted: #A1A1AA; --faint: #8E8E97; --chip: #26262B;
-    --accent: #D7F25A; --accent-soft: #2B3410; --accent-ink: #D7F25A;
-    --warn: #D7F25A; --warn-bg: #22270F; --warn-soft: #2A3012; --warn-line: #5C6B1E; --hot: #D7F25A;
-    --danger: #F4F4F0; --danger-bg: #2F3714; --ok: #A1A1AA; --ok-bg: #232327; --ok-dot: #52525B;
-    --info: #C6E04A; --info-bg: #1C2010;
-    --solid: #F4F4F0; --on-solid: #18181B; --on-hot: #18181B; --solid-icon: #3B5200; --brand-bg: #26262B; --solid-icon: #3B5200; --brand-bg: #26262B;
+    --accent: #9CCDB8; --accent-soft: #16302A; --accent-ink: #9CCDB8; --accent-strong: #5FB392; --on-strong: #0B2A21; --offline-dot: #E0714A;
+    --warn: #9CCDB8; --warn-bg: #12241F; --warn-soft: #16302A; --warn-line: #2C5A4B; --hot: #9CCDB8;
+    --danger: #F4F4F0; --danger-bg: #16302A; --ok: #A1A1AA; --ok-bg: #232327; --ok-dot: #52525B;
+    --info: #9CCDB8; --info-bg: #111F1B;
+    --solid: #F4F4F0; --on-solid: #18181B; --on-hot: #18181B; --solid-icon: #0E3328; --brand-bg: #26262B; --solid-icon: #0E3328; --brand-bg: #26262B;
     --track: #2A2A30; --offline: #52525B; --scrim: rgba(0, 0, 0, .5);
     --code-bg: #0B0B0D; --code-fg: #E7E5DF; --code-btn: #26262B; --seg-count: rgba(24, 24, 27, .22);
     --hover-ink: #FFFFFF;
@@ -140,6 +143,11 @@ code { font-family: var(--mono); font-size: 12px; background: var(--chip); paddi
 .brand { display: flex; align-items: center; gap: var(--s3); padding: var(--s1) var(--s2); text-decoration: none; min-width: 0; }
 .brand-mark { width: 36px; height: 36px; border-radius: var(--r-control); background: var(--brand-bg); color: var(--accent); display: inline-flex; align-items: center; justify-content: center; flex: none; }
 .brand-mark.big { width: 48px; height: 48px; border-radius: var(--r-inner); }
+/* 品牌形象：PrivateBot 机器人。角色自己的颜色写在 SVG 里（白壳 / 黑面罩 / 荧光眼），
+   深浅两套主题下都不变；这里只管容器尺寸，不加阴影、不加背景块。 */
+.bot { display: block; }
+.brand-mark .bot, .brand-mark.big .bot { display: block; }
+
 .brand-text { display: flex; flex-direction: column; }
 .brand-text strong { font-size: 15px; }
 .brand-text span { font-family: var(--mono); font-size: 11px; color: var(--faint); letter-spacing: .12em; }
@@ -959,6 +967,26 @@ input.ask-chip { width: 96px; cursor: text; }
 .first-hint { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); padding: 10px 14px; border-radius: var(--r-inner); background: var(--accent-soft); color: var(--ink); }
 .first-hint .link-btn { white-space: nowrap; }
 
+/* 空状态（一件活都还没有）才露脸：机器人单独占右列，文字和按钮在左列，互不遮挡。
+   窄屏收成一列，形象缩到 120，不挤压按钮。
+   ★ 桌面这边不再画第二幅完整形象：侧栏底部已经常驻一个（见「品牌角色」最后一节），
+     同一屏里放两个同一个角色，看着像贴了两张海报。手机没有常驻位置，所以手机上留着它。 */
+.first-run { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--s6); }
+.first-run-body { display: flex; flex-direction: column; gap: var(--s3); min-width: 0; }
+.first-run-bot { flex: none; display: grid; place-items: center; }
+@media (min-width: 821px) {
+  .first-run { grid-template-columns: minmax(0, 1fr); }
+  .first-run-bot { display: none; }
+}
+@media (max-width: 820px) {
+  .first-run { grid-template-columns: 1fr; }
+  /* 形象提到文字上方：手机首屏本来就被通知条压得很低，放在下面要滚一屏才看得见，
+     那就不叫「首页展示完整机器人」了。 */
+  .first-run-bot { order: -1; padding-bottom: var(--s2); }
+  .first-run-bot .bot { width: 120px; height: 120px; }
+}
+
+
 /* 五格数据：数字 + 小图。一行放下，窄了再折。 */
 .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
 .tile { border-radius: var(--r-inner); padding: 11px 13px; gap: 6px; box-shadow: none; text-decoration: none; color: inherit;
@@ -1195,7 +1223,7 @@ input.ask-chip { width: 96px; cursor: text; }
 .crew-group .exec-section-quota { width: 120px; }
 .crew-group .exec-section-today { width: 90px; text-align: right; }
 .crew-dot { width: 8px; height: 8px; border-radius: var(--r-pill); background: var(--line-strong); flex: none; }
-.crew-dot.online { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.crew-dot.online { background: var(--accent-strong); box-shadow: 0 0 0 3px var(--accent-soft); }
 .crew-dot.dispatch { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
 .crew-group .exec-section-body { padding: 4px 18px 18px 62px; display: flex; flex-direction: column; gap: 16px; animation: view-in .28s cubic-bezier(.2, .8, .2, 1); }
 .crew-group .exec-block { border: 0; padding: 0; background: transparent; }
@@ -1372,3 +1400,516 @@ label.qa-opt:has(input:focus-visible) { outline: 2px solid var(--ink); outline-o
 .qa-foot { display: flex; justify-content: flex-end; }
 .qa-multi .qa-send { background: var(--solid); border-color: var(--solid); color: var(--on-solid); }
 .qa button:disabled { opacity: .5; cursor: progress; }
+
+/* ---------- 品牌角色：PrivateBot 的动效 ----------
+   一个元素只归一个动画管，谁也不跟谁抢 transform：
+     svg.bot        ← pressed（bot.js 用 WAAPI 压一下，一处独占）
+     .bot-root      ← idle 浮动 / success 跃起（同一属性，状态规则后来居上）
+     [data-part]    ← 各管自己：head 转、eyes 眯、body 起伏、ring 呼吸、card 进场
+   状态分三处写，互不覆盖：data-bot-biz（业务态）、data-bot-touch（交互态）、
+   data-bot-state（合成态，给测试和读屏外的调试用）。
+   常驻动画只有三条：浮动、眨眼、轨道上那段光。其余都是一次性的。 */
+
+.bot { transform-origin: center center; transform-box: view-box; transition: transform .34s cubic-bezier(.34, 1.56, .64, 1); }
+
+/* pressed：按下去压 5%（横向给 1.5% 的对抗，体积才守恒），松手靠上面那条带过冲的曲线弹回来。
+   压的是整个 svg，不和内部的浮动/表情抢 transform；减少动态效果时 transition 被全局关掉，
+   会变成「直接压下去、直接弹回」，不晃。 */
+.bot[data-bot-touch="pressed"] { transform: scale(1.015, .95); transition-duration: .12s; transition-timing-function: ease-out; }
+
+/* idle：整体上下 3.6 个单位（190px 下约 3px），5.6 秒一个来回，像呼吸不像弹簧 */
+.bot-figure .bot-root { animation: bot-float 5.6s ease-in-out infinite; }
+@keyframes bot-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3.6px); }
+}
+
+/* 眨眼：7.4 秒一次，闭眼只占 4%，不抢注意力。图标慢一点，别在侧边栏一直闪 */
+.bot .bot-eye {
+  transform-box: fill-box; transform-origin: center;
+  animation: bot-blink 7.4s cubic-bezier(.35, 0, .4, 1) infinite;
+}
+.bot-head .bot-eye { animation-duration: 9.6s; }
+@keyframes bot-blink {
+  0%, 90.5%, 100% { transform: scaleY(1); }
+  92.5%, 94.8% { transform: scaleY(.06); }
+  96.4% { transform: scaleY(1); }
+}
+
+/* 轨道上那一小段光：dash 沿路径爬行。比转一个椭圆更像「轨道在走」，
+   也不会让整块盘子看起来在打转（椭圆一转就穿帮）。周期 7 秒，很慢。 */
+.bot .bot-flow {
+  stroke-dasharray: 26 106;
+  animation: bot-flow 7s linear infinite;
+}
+.bot [data-part="ring-back"] .bot-flow { animation-delay: -3.5s; }
+@keyframes bot-flow {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -132; }
+}
+
+/* ── hover：头和眼睛跟着鼠标偏一点，离开就柔和复位 ──
+   位移量由 bot.js 写进 --look-x / --look-y，CSS 只负责怎么拼、怎么过渡。 */
+.bot-figure [data-part="head"] {
+  transform-box: view-box; transform-origin: 120px 90px;
+  transform: translate(calc(var(--look-x, 0) * 1px), calc(var(--look-y, 0) * 1px)) rotate(calc(var(--tilt, 0) * 1deg + var(--look-x, 0) * 0.7deg));
+  transition: transform .42s cubic-bezier(.22, .61, .36, 1);
+}
+.bot-figure [data-part="eyes"] {
+  transform-box: view-box; transform-origin: 120px 87.5px;
+  transform: translate(calc(var(--look-x, 0) * .5px), calc(var(--look-y, 0) * .5px)) scaleY(var(--squeeze, 1));
+  transition: transform .42s cubic-bezier(.22, .61, .36, 1);
+}
+.bot-head [data-part="eyes"] {
+  transform-box: view-box; transform-origin: 32px 31.5px;
+  transform: scaleY(var(--squeeze, 1));
+  transition: transform .3s cubic-bezier(.22, .61, .36, 1);
+}
+
+/* ── 业务态：只改「姿态」，动画另算。减少动态效果时这几条照样生效，
+      所以状态在关掉动画之后仍然看得出来。 ── */
+.bot-figure[data-bot-biz="working"] { --tilt: 1.8; --squeeze: .82; }
+.bot-head[data-bot-biz="working"] { --squeeze: .84; }
+.bot-figure[data-bot-biz="waiting"] { --tilt: -3.2; --squeeze: 1.06; }
+.bot-head[data-bot-biz="waiting"] { --squeeze: 1.12; }
+.bot-figure[data-bot-biz="failed"] { --tilt: 3.4; }
+
+/* working：身体轻轻起伏，像在干活 */
+.bot-figure[data-bot-biz="working"] [data-part="body"] {
+  transform-box: fill-box; transform-origin: center;
+  animation: bot-work 1.9s ease-in-out infinite;
+}
+@keyframes bot-work {
+  0%, 100% { transform: translateY(0) scaleY(1); }
+  50% { transform: translateY(-1.4px) scaleY(1.015); }
+}
+
+/* waiting：停下别的动作，轨道一呼一吸地提醒「有事等你」 */
+.bot-figure[data-bot-biz="waiting"] [data-part="ring-front"],
+.bot-figure[data-bot-biz="waiting"] [data-part="ring-back"] {
+  animation: bot-wait 2.6s ease-in-out infinite;
+}
+@keyframes bot-wait {
+  0%, 100% { opacity: .58; }
+  50% { opacity: 1; }
+}
+
+/* success：竖眼交叉淡出、弯眼淡入；轨道上那段光闪一下。跃起在 .bot-root 上，
+   和浮动是同一个属性，所以状态规则要压过 idle 那条。 */
+.bot [data-part="eyes"] .bot-eye { transition: opacity .18s linear; }
+.bot [data-part="eyes-happy"] { transition: opacity .2s linear .04s; }
+.bot[data-bot-biz="success"] [data-part="eyes"] .bot-eye { opacity: 0; }
+.bot[data-bot-biz="success"] [data-part="eyes-happy"] { opacity: 1; }
+.bot-figure[data-bot-biz="success"] .bot-root { animation: bot-hop .92s cubic-bezier(.3, .7, .4, 1) 1; }
+@keyframes bot-hop {
+  0% { transform: translateY(0); }
+  20% { transform: translateY(-9px); }
+  42% { transform: translateY(0); }
+  56% { transform: translateY(-3.4px); }
+  72%, 100% { transform: translateY(0); }
+}
+.bot[data-bot-biz="success"] .bot-flow { animation: bot-shine .95s ease-out 1; }
+@keyframes bot-shine {
+  0% { stroke-width: 5; opacity: .9; }
+  28% { stroke-width: 9; opacity: 1; }
+  100% { stroke-width: 5; opacity: .9; }
+}
+.bot[data-bot-biz="success"] [data-part="spark"] {
+  transform-box: fill-box; transform-origin: center;
+  animation: bot-twinkle .95s ease-out 1;
+}
+@keyframes bot-twinkle {
+  0% { transform: scale(1); opacity: 1; }
+  35% { transform: scale(1.5); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* failed：眼睛暗下去，头低一点。没有跃起、没有闪光——失败不该有庆祝动作 */
+.bot[data-bot-biz="failed"] [data-part="eyes"] .bot-eye { opacity: .34; }
+
+/* ── task-received：卡片从下面升上来被接住，再收走 ── */
+.bot-figure.is-receiving [data-part="card"] { animation: bot-card 1.15s cubic-bezier(.2, .7, .3, 1) 1 both; }
+@keyframes bot-card {
+  0% { opacity: 0; transform: translateY(26px) scale(.92); }
+  14% { opacity: 1; transform: translateY(0) scale(1); }
+  62% { opacity: 1; transform: translateY(-5px) scale(1); }
+  100% { opacity: 0; transform: translateY(-26px) scale(.86); }
+}
+.bot-figure.is-receiving [data-part="body"] { animation: bot-catch .7s ease-out 1; }
+@keyframes bot-catch {
+  0%, 100% { transform: translateY(0); }
+  26% { transform: translateY(3.2px); }
+  62% { transform: translateY(-1.6px); }
+}
+
+/* ── 一次性反馈气泡：只在有真事要说的时候出现，说完就删掉自己。
+      不是常驻悬浮物；aria-hidden，读屏靠 toast 里那句话，不重复播报。 ── */
+.bot-bubble {
+  position: fixed; right: var(--s5); bottom: var(--s5); z-index: 39;
+  display: flex; align-items: center; gap: 8px; padding: 4px 16px 4px 4px;
+  border: 1px solid var(--line); border-radius: var(--r-inner); background: var(--panel);
+  box-shadow: var(--shadow-float); opacity: 0; transform: translateY(10px);
+  transition: opacity .26s var(--ease), transform .26s var(--ease);
+  pointer-events: none;
+}
+.bot-bubble.show { opacity: 1; transform: translateY(0); }
+.bot-bubble .bot-bubble-fig { display: inline-flex; width: 68px; height: 68px; flex: none; }
+.bot-bubble .bot { width: 68px; height: 68px; }
+.bot-bubble-text { font-size: 13px; line-height: 1.2; color: var(--ink-2); white-space: nowrap; }
+.bot-bubble[data-tone="bad"] .bot-bubble-text { color: var(--muted); }
+@media (max-width: 820px) {
+  .bot-bubble { right: var(--s3); bottom: calc(var(--s3) + 44px); }
+  .bot-bubble-text { white-space: normal; max-width: 44vw; }
+}
+
+/* 页面不可见时停掉所有角色动画：省电，回来时接着跑（不是从头跑） */
+html.bot-paused .bot,
+html.bot-paused .bot *,
+html.bot-paused .bot-chip-dot { animation-play-state: paused !important; }
+
+/* 减少动态效果：常驻位移/旋转/弹跳全部不跑（全局那条 *{animation:none} 已经关了），
+   只留下姿态差别。指针跟随也一并在 JS 里关掉，免得头在抖。 */
+@media (prefers-reduced-motion: reduce) {
+  .bot-figure [data-part="head"],
+  .bot-figure [data-part="eyes"],
+  .bot-head [data-part="eyes"] { transition: none; }
+  .bot-figure [data-part="head"],
+  .bot-figure [data-part="eyes"] { transform: none; }
+  .bot-figure [data-part="head"] { transform: rotate(calc(var(--tilt, 0) * 1deg)); }
+  .bot-figure [data-part="eyes"] { transform: scaleY(var(--squeeze, 1)); }
+  .bot-bubble { transition: none; }
+}
+
+/* ---------- 品牌角色 · 桌面与手机各站在哪 ----------
+   同一个形象、同一个状态控制器（public/bot.js），只是挂载点不同：
+     桌面 >820px  侧栏底部、额度入口上方，96px 常驻，六态和鼠标跟随都在
+     手机 ≤820px  顶栏最右一个 36px 的头像（按钮 44×44），点开底部状态卡；
+                  完整形象只在「一件活都还没有」的空状态里出现，不常驻
+   两边不会同时出现完整形象，所以状态天然一致，不用同步两套。 */
+
+/* 桌面：侧栏底部。位置在 .side-foot 里、额度前面；margin-top:auto 已经把它推到底。 */
+.side-bot { display: flex; justify-content: center; align-items: flex-end; padding: 2px 0 4px; }
+.side-bot .bot { width: 96px; height: 96px; }
+/* 折叠成 76px 窄轨时缩到 44 —— 保留「它还在」，但不撑破轨道 */
+.app.side-collapsed .side-bot { padding: 0; }
+.app.side-collapsed .side-bot .bot { width: 44px; height: 44px; }
+
+/* 手机头像：桌面默认不显示（那边侧栏已经站着完整形象） */
+.bot-chip { display: none; }
+.bot-chip-dot { display: none; }
+
+@media (max-width: 820px) {
+  /* 标题吃掉剩余宽度，把主题按钮和头像顶到右边 */
+  .shell-title { flex: 1 1 auto; min-width: 0; overflow: hidden; }
+  .shell-title strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .bot-chip {
+    position: relative; display: inline-flex; align-items: center; justify-content: center;
+    width: 44px; height: 44px; flex: none; margin: -4px -2px -4px 0; padding: 0;
+    border: 1px solid transparent; border-radius: var(--r-control); background: transparent;
+    color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent;
+    transition: background var(--t) var(--ease), border-color var(--t) var(--ease);
+  }
+  .bot-chip:active { background: var(--chip); }
+  .bot-chip:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  /* 白壳顶在白顶栏上只剩两只眼：给形象本身一点投影，让它从纸面上站起来。
+     只加投影，不改壳色、不改比例。深色主题下本来就分得开，投影不显眼也无妨。 */
+  .bot-chip-face { display: inline-flex; filter: drop-shadow(0 1px 1.5px rgba(24, 24, 27, .18)); }
+  /* 等待审批的提示点：黄绿实心 + 一圈底色描边，浅色顶栏上也立得住 */
+  .bot-chip-dot {
+    display: block; position: absolute; top: 5px; right: 5px;
+    width: 8px; height: 8px; border-radius: var(--r-pill); background: var(--accent);
+    /* 黄绿挨着白顶栏只有 1.25:1，光靠颜色立不住：贴边压一条深色细线把边界画出来，
+       外面再留一圈底色缝，和白色壳分开。深色主题下这条线藏在深底里，不碍事。 */
+    box-shadow: 0 0 0 1px rgba(24, 24, 27, .9), 0 0 0 2px var(--panel);
+    opacity: 0; transform: scale(.5);
+    transition: opacity .2s var(--ease), transform .2s var(--ease);
+  }
+  .bot-chip[data-waiting="1"] .bot-chip-dot { opacity: 1; transform: scale(1); animation: bot-dot 2.6s ease-in-out infinite; }
+}
+/* 只做轻微的胀缩，不改透明度：呼吸到 0.68 时黄绿会淡成一层水印，
+   浅色顶栏上就分不出来了——提示点得一直是实的。 */
+@keyframes bot-dot {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.14); }
+}
+
+/* 底部状态卡。只读：没有 POST 按钮，只有数字和链接。
+   不让遮住底部 tab bar（让出整条栏高 + 6px 缝）也不铺遮罩，所以开着它照样能点导航。
+   tab bar 高 = 52(导航项) + 8×2(side 上下 padding) + 1(上边框) + 安全区。 */
+.bot-sheet {
+  position: fixed; left: 8px; right: 8px; z-index: 41;
+  bottom: calc(52px + var(--s2) * 2 + 1px + env(safe-area-inset-bottom) + 6px);
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 12px 14px 14px;
+  border: 1px solid var(--line); border-radius: var(--r-inner);
+  background: var(--panel); box-shadow: var(--shadow-float);
+  max-height: 52vh; max-height: min(52dvh, 380px);
+  overflow-y: auto; overscroll-behavior: contain;
+}
+.bot-sheet[data-open="1"] { animation: bot-sheet-in .22s cubic-bezier(.2, .8, .2, 1); }
+@keyframes bot-sheet-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+/* 桌面上这张卡没有意义（点不到头像），就算 JS 打开了也不显示 */
+@media (min-width: 821px) { .bot-sheet { display: none !important; } }
+
+.bot-sheet-grip { width: 34px; height: 4px; border-radius: var(--r-pill); background: var(--line-strong); align-self: center; margin: -2px 0 0; }
+.bot-sheet-top { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.bot-sheet-top strong { font-size: 13px; }
+.bot-sheet-line { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bot-sheet-nums { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.bot-num {
+  display: flex; align-items: baseline; gap: 6px; padding: 10px 12px;
+  border-radius: var(--r-control); border: 1px solid var(--line); background: var(--panel-2);
+  color: inherit; text-decoration: none;
+}
+.bot-num b { font-family: var(--mono); font-size: 19px; line-height: 1; }
+.bot-num span { font-size: 12px; color: var(--muted); }
+.bot-sheet[data-waiting="1"] .bot-num[data-k="waiting"] { background: var(--accent-soft); border-color: transparent; }
+.bot-sheet-links { display: flex; gap: 8px; }
+.bot-sheet-links a {
+  flex: 1 1 0; min-height: 40px; display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--line-strong); border-radius: var(--r-control);
+  font-size: 12px; color: var(--ink-2); text-decoration: none;
+}
+.bot-sheet-links a:active { background: var(--chip); }
+.bot-sheet-note { margin: 0; font-size: 11px; line-height: 1.45; color: var(--faint); }
+
+/* 横屏 / 小高度：卡片压矮，别顶掉正文 */
+@media (max-width: 820px) and (max-height: 500px) {
+  .bot-sheet { max-height: 46vh; max-height: min(46dvh, 240px); }
+  .bot-sheet-note { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bot-chip { transition: none; }
+  .bot-chip-dot { transition: none; }
+  .bot-sheet[data-open="1"] { animation: none; }
+}
+
+/* 061.1：一条流。一行一件事；只有「等你」那组是亮的（黄绿底），其余是白底细线，做好了的更淡。 */
+.stream { display: flex; flex-direction: column; gap: 18px; max-width: 720px; width: 100%; margin: 0 auto; }
+.flow-group { display: flex; flex-direction: column; gap: 8px; }
+.flow-head { margin: 0; font-size: 13px; font-weight: 500; color: var(--muted); }
+.flow-n { font-variant-numeric: tabular-nums; }
+.flow-list { display: flex; flex-direction: column; gap: 8px; }
+.flow-row { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 10px 14px; border-radius: var(--r-inner); text-decoration: none; color: var(--ink); border: 1px solid var(--line); background: var(--panel); transition: background-color .18s ease, border-color .18s ease; }
+.flow-row:hover { border-color: var(--ink-2); }
+.flow-row:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.flow-row.hot { background: var(--accent); border-color: transparent; color: #1A1A17; min-height: 64px; }
+.flow-row.hot:hover { border-color: #1A1A17; }
+.flow-row.low { background: transparent; }
+.flow-mark { flex: none; width: 20px; text-align: center; font-size: 16px; line-height: 1; }
+.flow-row.mid .flow-mark, .flow-row.low .flow-mark { color: var(--muted); }
+.flow-row[data-kind="running"] .flow-mark { animation: flow-spin 2.4s linear infinite; }
+@keyframes flow-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .flow-row[data-kind="running"] .flow-mark { animation: none; } }
+.flow-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.flow-title { font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.flow-row.low .flow-title { font-weight: 400; }
+.flow-sub { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.flow-row.hot .flow-sub { color: #1E5B4A; }
+.flow-when { flex: none; font-size: 12px; color: var(--muted); }
+.flow-go { flex: none; color: var(--muted); }
+.flow-row.hot .flow-go { color: #1A1A17; }
+.flow-foot { display: flex; flex-direction: column; border-top: 1px solid var(--line); margin-top: 4px; }
+.flow-foot a { display: flex; justify-content: space-between; align-items: center; min-height: 44px; color: var(--muted); text-decoration: none; font-size: 14px; }
+.flow-foot a + a { border-top: 1px solid var(--line); }
+.flow-foot a:hover { color: var(--ink); }
+
+.stream-ask .ask { width: 100%; box-sizing: border-box; min-height: 56px; border-radius: var(--r-inner); border-color: var(--ink); }
+.flow-more { display: flex; flex-direction: column; gap: 8px; }
+.flow-more > summary { list-style: none; cursor: pointer; }
+.flow-more > summary::-webkit-details-marker { display: none; }
+.flow-more[open] > summary .flow-go { transform: rotate(90deg); }
+.flow-row.hot-ghost { background: transparent; border: 1px dashed var(--accent-strong); min-height: 48px; }
+.flow-row.hot-ghost .flow-title { font-weight: 400; }
+
+/* 061.1：外壳。没有侧栏——左上角回首页（挂「等你」那一个数），一排执行者头像，最右深浅色和齿轮。 */
+.app.shell-top { display: block; }
+.app.shell-top .main { min-height: 100vh; }
+.shell-head { gap: 10px; flex-wrap: nowrap; }
+.shell-gap { flex: 1; }
+.home-mark { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: var(--r-pill); text-decoration: none; flex: none; }
+.home-mark .nav-badge { position: absolute; top: -2px; right: -6px; }
+.crew-row { display: flex; align-items: center; gap: 8px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.crew-row::-webkit-scrollbar { display: none; }
+.crew-face { position: relative; flex: none; width: 40px; height: 40px; border-radius: var(--r-pill); display: inline-flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; text-decoration: none; color: var(--muted); border: 1px solid var(--line); background: transparent; }
+.crew-face.on { color: var(--ink); border-color: var(--ink); background: var(--panel); }
+.crew-face.add, .crew-face.more { border-style: dashed; font-weight: 400; }
+.crew-face.rest { opacity: .45; border-style: dotted; }
+.crew-status { margin: 0; font-size: 15px; color: var(--ink); }
+.crew-brief { margin: 0; font-size: 14px; line-height: 1.6; color: var(--muted); }
+.crew-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.crew-item { display: flex; align-items: center; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.crew-item-text { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; text-decoration: none; color: var(--ink); }
+.crew-item-text b { font-size: 15px; font-weight: 600; }
+.crew-item-text i { font-style: normal; font-size: 12px; color: var(--muted); }
+.crew-item-text span { flex-basis: 100%; font-size: 13px; line-height: 1.5; color: var(--muted); }
+.crew-item .btn-line { flex: none; }
+.crew-face:hover { border-color: var(--ink); color: var(--ink); }
+.crew-dot { position: absolute; right: -1px; bottom: -1px; width: 11px; height: 11px; border-radius: var(--r-pill); background: var(--accent-strong); border: 2px solid var(--panel); }
+.gear { position: relative; flex: none; width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; color: var(--muted); border-radius: var(--r-pill); }
+.gear:hover, .gear.on { color: var(--ink); }
+.gear-dot { position: absolute; top: 9px; right: 9px; width: 8px; height: 8px; border-radius: var(--r-pill); background: var(--accent-strong); border: 2px solid var(--panel); }
+.app.shell-top .shell-body { max-width: 1100px; width: 100%; margin: 0 auto; box-sizing: border-box; }
+/* 深浅色切换不抢眼：没有框，和齿轮一个分量。手机上收进 设置 › 外观。 */
+.app.shell-top .theme-toggle { border: 0; background: transparent; box-shadow: none; width: 44px; height: 44px; color: var(--muted); }
+.app.shell-top .theme-toggle:hover { color: var(--ink); }
+@media (max-width: 820px) {
+  .app.shell-top .shell-body { padding-bottom: 48px; }
+  .app.shell-top .shell-head { gap: 6px; }
+  .app.shell-top .theme-toggle { display: none; }
+  .crew-face { width: 36px; height: 36px; font-size: 13px; }
+}
+
+/* 061（设计稿 11-10）：没有顶栏。首页 = 左边一列流（头像排在最上面），右边是点开的那件事。 */
+.app.shell-top .shell-body { max-width: 1340px; padding-top: 28px; }
+.home { display: flex; gap: 32px; align-items: flex-start; width: 100%; }
+.home .stream { flex: 1 1 380px; max-width: 448px; margin: 0; gap: 16px; }
+.home:not(.has-thread) .stream { margin: 0 auto; max-width: 480px; }
+.crew-bar { display: flex; align-items: center; gap: 10px; }
+.crew-bar .crew-row { flex: 1; }
+.crew-face { width: 44px; height: 44px; font-size: 15px; font-weight: 500; }
+.crew-dot { width: 12px; height: 12px; border-color: var(--bg, #F4F4EF); }
+.stream-ask .ask, .reply { display: flex; align-items: center; gap: 8px; width: 100%; box-sizing: border-box; height: auto; min-height: 58px; padding: 6px 6px 6px 18px; background: var(--panel); border: 1px solid var(--ink); border-radius: var(--r-card); }
+.stream-ask .ask input, .reply input { flex: 1; min-width: 0; height: 44px; border: 0; outline: none; background: transparent; font-size: 16px; color: var(--ink); padding: 0; }
+.send { flex: none; width: 44px; height: 44px; border: 0; border-radius: var(--r-inner); background: var(--accent-strong); color: var(--on-strong); overflow: hidden; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+
+.flow-row { border-radius: var(--r-card); }
+.flow-row.open { border: 2px solid #1A1A17; }
+.flow-mark.spin { display: inline-block; animation: flow-spin 2.4s linear infinite; }
+
+.thread { flex: 2 1 520px; min-width: 0; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-card); padding: 28px 32px; display: flex; flex-direction: column; gap: 18px; }
+.thread-top { display: flex; align-items: center; justify-content: space-between; order: -1; }
+.thread-back { display: none; width: 44px; height: 44px; margin-left: -10px; align-items: center; justify-content: center; color: var(--ink); }
+.thread-id { margin-left: auto; font-size: 13px; color: var(--muted); }
+.thread-title { margin: 0; font-size: 22px; font-weight: 700; line-height: 1.35; }
+.relay { margin: -8px 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 13px; color: var(--muted); }
+.relay i { font-style: normal; opacity: .5; }
+.relay-step.done { opacity: .75; }
+.relay-step.next { opacity: .45; }
+.relay-step.now { color: var(--ink); font-weight: 600; }
+.says { display: flex; flex-direction: column; gap: 12px; max-width: 680px; }
+.say { display: flex; gap: 10px; align-items: flex-start; }
+.say-face { flex: none; width: 28px; height: 28px; border-radius: var(--r-pill); border: 1px solid var(--ink); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; background: var(--panel); }
+.say.me .say-face { background: #1A1A17; color: #F4F4EF; border-color: #1A1A17; }
+.say-text { margin: 0; padding: 10px 14px; background: var(--bg, #F4F4EF); border-radius: var(--r-inner); font-size: 15px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.decide-card { max-width: 680px; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; padding: 20px; border-radius: var(--r-card); background: var(--accent); color: #1A1A17; }
+.decide-card h3 { margin: 0; font-size: 18px; font-weight: 700; }
+.decide-sub { margin: 0; font-size: 14px; }
+.decide-lines { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+.decide-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; }
+.btn-ink, .btn-line { min-width: 120px; min-height: 48px; padding: 0 16px; border-radius: var(--r-inner); font-size: 16px; font-family: inherit; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 10px; }
+.btn-ink { border: 0; background: #1A1A17; color: #F4F4EF; font-weight: 500; }
+.btn-line { border: 1px solid #1A1A17; background: transparent; color: #1A1A17; list-style: none; }
+.btn-line::-webkit-details-marker { display: none; }
+.btn-ink.wide, .btn-line.wide { width: 100%; justify-content: flex-start; }
+.decide-no { display: flex; flex-direction: column; gap: 8px; flex: 0 1 auto; }
+.decide-no[open] { flex: 1 1 100%; }
+.decide-no textarea { width: 100%; box-sizing: border-box; border: 1px solid #1A1A17; border-radius: var(--r-inner); background: #F4F4EF; color: #1A1A17; padding: 10px; font: inherit; }
+.decide-link { align-self: flex-start; min-height: 44px; display: inline-flex; align-items: center; padding: 0; border: 0; background: transparent; color: #1A1A17; font-size: 14px; text-decoration: underline; cursor: pointer; font-family: inherit; }
+.decide-sub.verify-warn { font-weight: 600; color: var(--ink); }
+.verify-more summary { font-size: 13px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.verify-tail { margin: 8px 0 0; padding: 10px 12px; max-height: 220px; overflow: auto; font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; background: var(--chip); border-radius: var(--r-inner); }
+.review-why { margin: 0; font-size: 12.5px; color: var(--muted); }
+.thread-live { margin: 0; display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--muted); }
+.reply { max-width: 680px; }
+.thread-more { max-width: 680px; border-top: 1px solid var(--line); }
+.thread-more > summary { list-style: none; display: flex; justify-content: space-between; align-items: center; min-height: 44px; font-size: 14px; color: var(--muted); cursor: pointer; }
+.thread-more > summary::-webkit-details-marker { display: none; }
+.thread-more[open] > summary span:last-child { transform: rotate(90deg); }
+.thread-detail { display: flex; flex-direction: column; gap: 12px; padding-top: 8px; }
+.thread-detail .drawer-top, .thread-detail .drawer-title { display: none; }
+@media (max-width: 900px) {
+  .app.shell-top .shell-body { padding-top: 20px; }
+  .home { display: block; }
+  .home .stream, .home:not(.has-thread) .stream { max-width: none; }
+  .home.has-thread .stream { display: none; }
+  .thread { border: 0; background: transparent; padding: 0; min-height: calc(100vh - 80px); }
+  .thread-back { display: inline-flex; }
+  .thread .say-text { background: var(--panel); border: 1px solid var(--line); }
+  .thread .reply { margin-top: auto; }
+}
+
+/* 060.2：包的按钮——派活框下面一排小圆角按钮；要输入的点开是一行。 */
+.pack-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
+.pack-btn { min-height: 44px; padding: 0 14px; border-radius: var(--r-pill); border: 1px solid var(--line-strong, #B4B2A9); background: transparent; color: var(--ink); font-size: 14px; font-family: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; list-style: none; }
+.pack-btn::-webkit-details-marker { display: none; }
+.pack-btn:hover { border-color: var(--ink); }
+.pack-ask[open] { flex: 1 1 100%; display: flex; flex-direction: column; gap: 8px; }
+.pack-ask[open] > summary { align-self: flex-start; border-color: var(--ink); }
+.pack-problems { margin: 0; padding-left: 18px; font-size: 13px; }
+.pack-acts { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.pack-acts dt { font-weight: 600; font-size: 13px; }
+.pack-acts dd { margin: 0; }
+
+/* 062：谁做、谁审——派活框下面一行小字，点开是两排点选。 */
+.stream-ask .ask { flex-wrap: wrap; }
+.ask-who { flex: 1 1 100%; font-size: 13px; color: var(--muted); }
+.ask-who > summary { list-style: none; display: inline-flex; align-items: center; gap: 6px; min-height: 32px; cursor: pointer; }
+.ask-who > summary::-webkit-details-marker { display: none; }
+.ask-who[open] > summary span:last-child { transform: rotate(90deg); }
+.who-row { border: 0; margin: 0; padding: 6px 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.who-row legend { padding: 0; margin-bottom: 6px; font-size: 13px; color: var(--muted); }
+.who-chip { position: relative; display: inline-flex; }
+.who-chip input { position: absolute; opacity: 0; pointer-events: none; }
+.who-chip span { min-height: 40px; padding: 0 14px; border-radius: var(--r-pill); border: 1px solid var(--line-strong, #B4B2A9); display: inline-flex; align-items: center; font-size: 14px; color: var(--ink); cursor: pointer; }
+.who-chip.dashed span { border-style: dashed; }
+.who-chip input:checked + span { background: #1A1A17; color: #F4F4EF; border-color: #1A1A17; border-style: solid; }
+.who-chip input:focus-visible + span { outline: 2px solid var(--ink); outline-offset: 2px; }
+.who-hint { margin: 4px 0 8px; line-height: 1.6; }
+/* 062：审的意见卡。要改 = 黑边大卡；过 / 拿不准 / 没审成 = 细线小卡。 */
+.review-card { max-width: 680px; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px; padding: 16px; background: var(--panel); border: 2px solid var(--ink); border-radius: var(--r-card); font-size: 15px; line-height: 1.5; }
+.review-card.small { border: 1px solid var(--line); padding: 12px 16px; gap: 4px; font-size: 14px; }
+.review-card p { margin: 0; }
+.review-head { display: flex; align-items: center; gap: 10px; }
+.review-head strong { flex: 1; font-size: 16px; }
+.review-card.small .review-head strong { font-size: 15px; }
+.review-round { font-size: 13px; color: var(--muted); }
+.review-items { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+.review-foot { font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 10px; }
+
+/* 2026-11-12：头像一排在窄的时候不挤到齿轮上。
+   按这一排自己的宽度算头像大小（最多 6 个头像 + 「+N」+「＋」= 8 个），不再横向滚动——
+   滚动会把最后一个（「＋」）切掉一半。 */
+.crew-bar { container-type: inline-size; gap: 6px; }
+.crew-bar .crew-row { overflow: visible; gap: clamp(4px, 1.4cqw, 8px); }
+.crew-bar .crew-face { --face: clamp(30px, calc((100cqw - 50px - 7 * 6px) / 8), 44px); width: var(--face); height: var(--face); font-size: clamp(12px, calc(var(--face) * .34), 15px); }
+.crew-bar .crew-dot { width: clamp(9px, calc(var(--face) * .26), 12px); height: clamp(9px, calc(var(--face) * .26), 12px); }
+.crew-dot.off { background: var(--offline-dot); }
+
+/* 2026-11-12：额度和深浅色回到首页（061 去掉侧栏、顶栏时弄丢的）。额度是最下面那几行里的一行，点开就地展开。 */
+.flow-foot .quota { border-top: 1px solid var(--line); }
+.flow-foot .quota > summary { min-height: 44px; padding: 0; border-radius: 0; gap: 10px; color: var(--muted); font-size: 14px; }
+.flow-foot .quota > summary:hover { background: transparent; color: var(--ink); }
+.flow-foot .q-word { font-size: 14px; color: inherit; order: -1; }
+.flow-foot .q-go { margin-left: auto; }
+.flow-foot .quota[open] .q-go { transform: rotate(90deg); }
+.flow-foot .quota-pop { position: static; width: auto; padding: 4px 0 14px; border: 0; background: transparent; box-shadow: none; animation: none; }
+.flow-foot .quota + a { border-top: 1px solid var(--line); }
+.q-mini i.high, .q-dots i.high { background: var(--accent-strong); }
+.q-mini i.mid, .q-dots i.mid { background: var(--accent); box-shadow: none; }
+.flow-tools { display: flex; justify-content: flex-start; margin-left: -12px; }
+.app.shell-top .flow-tools .theme-toggle { display: inline-flex; }
+
+/* 2026-11-12：按钮的动静。只给三处：发送、点头卡的「好」、「等你」那一行。别处不动。 */
+.send { transition: transform .18s ease-out, border-radius .28s ease-out; }
+.send:hover { transform: translateY(-2px); border-radius: var(--r-pill); }
+.send:hover svg { animation: send-fly .5s cubic-bezier(.2, .8, .2, 1); }
+.send:active { transform: scale(.9); }
+@keyframes send-fly { 0% { transform: translateY(0); } 45% { transform: translateY(-130%); } 46% { transform: translateY(130%); } 100% { transform: translateY(0); } }
+.decide-card .btn-ink { background: var(--accent-strong); color: var(--on-strong); transition: transform .18s ease-out, box-shadow .18s ease-out; }
+.decide-card .btn-ink:hover { transform: translateY(-2px); box-shadow: 0 6px 14px rgba(14, 51, 40, .22); }
+.decide-card .btn-ink:active { transform: scale(.96); box-shadow: none; }
+.flow-row.hot { transition: transform .2s ease-out; }
+.flow-row.hot:hover { transform: translateX(3px); }
+.flow-row.hot .flow-go { transition: transform .2s ease-out; }
+.flow-row.hot:hover .flow-go { transform: translateX(3px); }
+@media (prefers-reduced-motion: reduce) {
+  .send, .decide-card .btn-ink, .flow-row.hot, .flow-row.hot .flow-go { transition: none; }
+  .send:hover, .decide-card .btn-ink:hover, .flow-row.hot:hover, .flow-row.hot:hover .flow-go { transform: none; }
+  .send:hover svg { animation: none; }
+}

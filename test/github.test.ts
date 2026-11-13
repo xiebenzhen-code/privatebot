@@ -203,7 +203,8 @@ describe('commands', () => {
     const after = db.prepare('SELECT * FROM tasks WHERE id = ?').get(task.id) as any;
     assert.equal(after.status, 'queued');
     assert.equal(after.mode, 'manual');
-    assert.match(after.description, /请改用另一种实现/);
+    assert.match(after.material, /请改用另一种实现/, '054.8：修改意见是外部文字，进资料');
+    assert.ok(!/请改用另一种实现/.test(after.description));
   });
 
   test('the same comment is applied once', async () => {

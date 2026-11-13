@@ -11,7 +11,7 @@ import { getSetting } from '../services/dispatch.ts';
 import { setupCard } from './setup.ts';
 import { setupStatus, latestRunnerMeta } from '../services/setup.ts';
 import { runnerExecutors, runnerOnline } from '../services/runner.ts';
-import { icon } from './layout.ts';
+import { icon, brandMark } from './layout.ts';
 import { html, type Safe } from './html.ts';
 
 function stalePanel(): Safe {
@@ -157,18 +157,23 @@ export function overviewPage(q: URLSearchParams = new URLSearchParams()): Safe {
  * 一件任务都还没有时，在最上面放一个「先试一件事」：让 AI 读一遍你的项目，告诉你它是做什么的。
  * 不改任何文件；点完就去看结果。
  */
-function firstRunPanel(): Safe {
+export function firstRunPanel(): Safe {
   const projects = latestRunnerMeta().projects ?? [];
   const execs = runnerExecutors();
   const online = [...execs][0] ?? '';
   const ready = Boolean(projects.length && online);
+  // 044 v3 + 品牌形象：一件活都还没有的时候，才让完整形象出场。
+  // 它站在右边一列、随内容走流式布局，不压任何按钮和文字；窄屏自动收成一列。
   return html`
-  <section class="panel" data-first-run>
-    <div class="panel-head"><h2>先试一件事</h2></div>
-    <p class="lede">还什么都没跑过。下面这个不会改你的代码，只是让它读一遍、说说这项目是做什么的。</p>
-    ${ready ? html`
-      <p>会建一个只读任务：项目 <span class="mono">${projects[0]}</span>，执行者 ${execTag(online)}。跑完在任务详情里能看到它写的结果。</p>
-      <div class="actions"><button type="button" class="btn solid" data-api-click="/api/tasks/first-run" data-method="POST" data-redirect="/tasks?task={id}">试一个：让 AI 读一遍你的项目</button></div>`
-      : html`<div class="callout warn"><strong>还差一步</strong><span>执行器没连上，或者没配项目。先按「怎么开」把执行器跑起来，这里就会出现那个按钮。</span></div>`}
+  <section class="panel first-run" data-first-run>
+    <div class="first-run-body">
+      <div class="panel-head"><h2>先试一件事</h2></div>
+      <p class="lede">还什么都没跑过。下面这个不会改你的代码，只是让它读一遍、说说这项目是做什么的。</p>
+      ${ready ? html`
+        <p>会建一个只读任务：项目 <span class="mono">${projects[0]}</span>，执行者 ${execTag(online)}。跑完在任务详情里能看到它写的结果。</p>
+        <div class="actions"><button type="button" class="btn solid" data-api-click="/api/tasks/first-run" data-method="POST" data-redirect="/tasks?task={id}">试一个：让 AI 读一遍你的项目</button></div>`
+        : html`<div class="callout warn"><strong>还差一步</strong><span>执行器没连上，或者没配项目。先按「怎么开」把执行器跑起来，这里就会出现那个按钮。</span></div>`}
+    </div>
+    <div class="first-run-bot" aria-hidden="true">${brandMark(96)}</div>
   </section>`;
 }

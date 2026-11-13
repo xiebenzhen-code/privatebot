@@ -129,27 +129,18 @@ async function cookieForPages(): Promise<string> {
 }
 
 describe('sidebar + installable app', () => {
-  test('collapsed state is rendered from the wb_side cookie on every page', async () => {
+  test('061.1: no sidebar to collapse; the wb_side cookie is harmless', async () => {
     const cookie = await cookieForPages();
-    const open = await api('/', { token: null, headers: { Cookie: cookie } });
-    assert.equal(open.status, 200);
-    assert.ok(!open.text.includes('side-collapsed'), 'open by default');
-    assert.ok(open.text.includes('aria-expanded="true"'));
-
+    // 061.1（用户 11-10 定的设计稿）：没有侧栏了，收起侧栏的 cookie 留在旧浏览器里也不出错。
     const shut = await api('/', { token: null, headers: { Cookie: `${cookie}; wb_side=collapsed` } });
-    assert.ok(shut.text.includes('class="app side-collapsed"'), 'class comes from the server');
-    assert.ok(shut.text.includes('aria-expanded="false"'));
-    assert.ok(shut.text.includes('aria-label="展开侧边栏"'));
-
-    const settings = await api('/settings', { token: null, headers: { Cookie: `${cookie}; wb_side=collapsed` } });
-    assert.ok(settings.text.includes('side-collapsed'), 'state survives navigation');
+    assert.equal(shut.status, 200);
+    assert.ok(!shut.text.includes('id="wb-side"'));
+    assert.ok(!shut.text.includes('side-collapsed'));
   });
 
-  test('the icon rail keeps the four top-level names as tooltips', async () => {
+  test('061: the gear names settings for screen readers', async () => {
     const page = await api('/', { token: null, headers: { Cookie: await cookieForPages() } });
-    for (const name of ['工作台', '剧组', '记录', '设置']) {
-      assert.ok(page.text.includes(`title="${name}"`), name);
-    }
+    assert.match(page.text, /class="gear" href="\/settings" aria-label="设置/);
   });
 
   test('manifest, service worker and icons are public', async () => {
@@ -163,7 +154,7 @@ describe('sidebar + installable app', () => {
     assert.equal(manifest.scope, '/');
     assert.equal(manifest.display, 'standalone');
     assert.equal(manifest.background_color, '#F4F4F0');
-    assert.equal(manifest.theme_color, '#18181B');
+    assert.equal(manifest.theme_color, '#1E5B4A');
     assert.equal(manifest.icons.length, 3);
     assert.ok(manifest.icons.some((i: any) => i.sizes === '192x192' && i.type === 'image/png'));
     assert.ok(manifest.icons.some((i: any) => i.sizes === '512x512' && !i.purpose));

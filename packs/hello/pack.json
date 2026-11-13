@@ -1,0 +1,9 @@
+{
+  "format": 1,
+  "name": "hello",
+  "label": "示例",
+  "symbol": "◇",
+  "actions": [
+    { "label": "写一页说明", "prompt": "给这个项目写一页 README，说明它是做什么的。补充：{输入}", "input": "optional", "executor": "any" }
+  ]
+}

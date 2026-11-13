@@ -96,12 +96,16 @@ Format-Hex .env | Select-Object -First 1
 1. 先自检：`node scripts/runner.mjs --check`，最后一行是「一切就绪，可以跑任务了」再往下做。
 2. 建一个「登录时运行」的计划任务，**动作指向守卫脚本**而不是 runner 本体——守卫用 pid 锁文件保证同时只有一个 runner 在跑：
    ```powershell
-   $node  = (Get-Command node).Source
-   $repo  = (Get-Location).Path
+   $node = (Get-Command node).Source
+   $repo = (Get-Location).Path
    $guard = Join-Path $repo 'scripts\runner-guard.mjs'
-   # 043：用隐藏窗口的 PowerShell 起守卫。守卫和它下面的执行器、Claude Code、git 共用这一个看不见的控制台，
-   # 干活时不会再弹黑框；直接让计划任务起 node.exe 会留一个可见的控制台窗口，关掉它执行器就跟着没了。
-   $action  = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -Command `"& '$node' '$guard'`"" -WorkingDirectory $repo
+   # 054：先把隐藏启动器装到仓库外（%LOCALAPPDATA%\ai-workbench\launch-hidden.vbs），重复跑安全。
+   node scripts\install-launcher.mjs --repo $repo --node $node
+   $vbs = Join-Path $env:LOCALAPPDATA 'ai-workbench\launch-hidden.vbs'
+   # 054 取代 043 的做法：窗口样式 0 = 进程创建时就不分配可见控制台，Windows Terminal 的
+   # 控制台交接（黑框的来源）无从发生。043 的 -WindowStyle Hidden 只管 conhost 那一层，
+   # 默认终端是 Windows Terminal 时管不住它的顶层窗口，关掉那个窗口执行器整棵树就没了。
+   $action  = New-ScheduledTaskAction -Execute "$env:SystemRoot\System32\wscript.exe" -Argument "//nologo `"$vbs`" `"$node`" `"$guard`"" -WorkingDirectory $repo
    $trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Days 3650) -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 2) -StartWhenAvailable
    Register-ScheduledTask -TaskName 'AI Workbench Runner' -Action $action -Trigger $trigger -Settings $settings -Force
@@ -109,7 +113,36 @@ Format-Hex .env | Select-Object -First 1
    ```
 3. 验证：`Get-ScheduledTaskInfo -TaskName 'AI Workbench Runner'` 的 `LastTaskResult` 应为 `267009`（正在运行），网页「执行者」页应出现一台在线机器。日志在 `%LOCALAPPDATA%\ai-workbench\`：`runner-autostart.log` 是守卫和 runner 的控制台输出，`runner-<日期>.log` 是 runner 自己的步骤流水。
 
+> **已经用 043 方式注册过的机器**：不用删任务重来，停掉 Runner 后跑一遍 `node scripts\install-launcher.mjs`，它会就地把两个任务的动作换成启动器，再 `Start-ScheduledTask` 即可。
+>
+> **VBScript 是微软宣布弃用的组件**。哪天 Windows 移除了 wscript，改走「不管用户是否登录都运行」（`LogonType=Password`）：session 0 里根本没有窗口，代价是要输一次密码、Docker 管道与网络凭据需要重验——见 `docs/specs/054-codex.md`。
+
 > **别把 `-ExecutionTimeLimit` 写成 `0`。** 它在任务 XML 里落成 `PT0S`，部分 Windows 会当成「零秒超时」，任务一启动就被结束，`LastTaskResult` 是 `3221225786`（`0xC000013A`），日志里只有开头一行。
+
+## 再加一个看护任务（每分钟一次）
+
+守卫负责「runner 卡住了就重开」，但它自己也会被带走：2026-11-06 那一晚，guard 和 runner 一起消失，日志里一行都没留下（JS 层根本没执行）。所以再加一个**每分钟新起一次的**计划任务，它只做一件事——看心跳文件，停了就拉起来，并把现场写进日志。
+
+```powershell
+$node  = (Get-Command node).Source
+$repo  = (Get-Location).Path
+$watch = Join-Path $repo 'scripts\watch-runner.mjs'
+# 054：与 Runner 同款隐藏启动器（install-launcher.mjs 上面那步已经装好 vbs）。
+$vbs = Join-Path $env:LOCALAPPDATA 'ai-workbench\launch-hidden.vbs'
+$action  = New-ScheduledTaskAction -Execute "$env:SystemRoot\System32\wscript.exe" -Argument "//nologo `"$vbs`" `"$node`" `"$watch`"" -WorkingDirectory $repo
+# 从两分钟后开始，之后每分钟一次，不限次数；一次跑完就退出，不常驻。
+$trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(2) -RepetitionInterval (New-TimeSpan -Minutes 1)
+$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Minutes 5) -StartWhenAvailable
+Register-ScheduledTask -TaskName 'AI Workbench Watchdog' -Action $action -Trigger $trigger -Settings $settings -Force
+```
+
+判断只看 `%LOCALAPPDATA%\ai-workbench\runner.beat`：runner 每 30 秒写一次，**超过 90 秒没动**就算停了。不看计划任务状态——`Running` 只代表外层 powershell 在等，`Ready` 也不代表执行器没了（那天任务显示 `Ready`，guard 和 runner 都还在跑）。
+
+- 正常时它一声不响，日志里没有任何新行。
+- 出事了才写 `watch.log`：时间、原因、计划任务状态、心跳内容、`runner` 相关进程快照（pid / 父进程 / 启动时间 / 命令行）、最近十分钟的系统事件，然后是拉起结果，以及 20 秒后心跳有没有续上。
+- 拉起来之后 5 分钟内不再拉第二次（配置错的时候不至于每分钟刷一遍）；下一轮如果心跳还是停的，会再拉一次并重新记现场。
+
+> **工作树要停在带这个脚本的分支上。** 任务跑的是仓库里的 `scripts/watch-runner.mjs`，不是复制出去的一份。切到没有这个文件的分支（或删了工作树），任务每分钟都会失败，而失败是静默的——`watch.log` 一个字都不会写。查 `(Get-ScheduledTaskInfo -TaskName 'AI Workbench Watchdog').LastTaskResult`，非 `0` 就是这个原因。
 
 ## 验证（两条路线都要做）
 
@@ -197,3 +230,10 @@ Remove-Item Env:WB_SANDBOX_FAKEIP
 ```
 
 检查输出中 `proxyAllowed` 为 200，`proxyDenied`、`proxyInternal` 为 403。`dnsEmbedded` 应为 false。网页打开不代表沙箱可用，最终用一个只改文档的任务核对运行记录 API 的 `sandbox=docker`，再确认生成合并审批。
+
+### 看护运行时的暂停与待改事项
+
+需要故意停下执行器时，先运行 `Disable-ScheduledTask -TaskName 'AI Workbench Watchdog'`，再停 Runner。只停 Runner 会被每分钟的看护重新拉起。恢复时用 `Enable-ScheduledTask -TaskName 'AI Workbench Watchdog'`。
+
+- 待改：为 `watch.log` 设置大小上限或轮转。
+- 待改：Runner 计划任务不存在时，不要每隔静默期重复记录启动失败。

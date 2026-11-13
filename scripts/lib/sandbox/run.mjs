@@ -146,13 +146,24 @@ export function watchDisk(box, { limitMb, everyMs = 60_000, onOver, setTimer = s
 }
 
 const SETUP = 'set -e; git clone -q --branch main /work/repo.bundle "$2"; cd "$2"; git checkout -q -b "$1"; git remote remove origin; git config user.name wb-sandbox; git config user.email sandbox@localhost; rm -f /work/repo.bundle';
-const HARVEST = 'set -e; cd "$2"; git add -A; git diff --cached --quiet || git commit -q -m "$1"; git diff --binary --full-index main..HEAD > /work/out.patch';
+// 054.8：外部资料放进容器里的仓库，并加本地忽略——HARVEST 的 `git add -A` 不会把它收进补丁。
+const MATERIAL_DIR = 'set -e; mkdir -p "$1/.wb" "$1/.git/info"; printf \'.wb/\\n\' >> "$1/.git/info/exclude"';
+const MATERIAL_PATHS = ['.wb/issue.md', '.wb/changes.patch', '.wb/review.md', '.wb/previous.patch'];
+// 062：打回重做时，容器里的仓库是从 main 克隆的，上一版不在——照补丁恢复并提交一次。
+// 恢复不了（补丁被截断、对不上）不算失败：补丁文件还在，提示词里说了「没有就照补丁恢复」。
+// 用的是完整补丁（--binary，不截断）；先 --check，整份能套才套，不留半截。
+const RESTORE = 'set -e; cd "$1"; git apply --check --index --whitespace=nowarn .wb/previous.patch; git apply --index --whitespace=nowarn .wb/previous.patch; git commit -q -m "上一版（打回前）"; git tag wb-base';
+const RESTORE_FAILED = '上一版没能自动恢复到这个目录（补丁太大、对不上，或上一版的分支已被清理）。\n可读的改动在 .wb/changes.patch（可能被截断，二进制文件不在里面）。\n先尽量照它恢复，再按 .wb/review.md 的意见改；恢复不了的部分在结果里明说，不要当它不存在。\n';
+// 062：补丁的起点要和宿主那边一致。打回重做时宿主的工作目录里已经有上一版（从上一版分支起，或者就是上一版的目录），
+// 所以恢复成功后从恢复出来的那一版（wb-base）算起，只交这一轮新改的；不然上一版会被再加一遍，套不上去。
+const HARVEST = 'set -e; cd "$2"; git add -A; git diff --cached --quiet || git commit -q -m "$1"; base=main; if git rev-parse -q --verify refs/tags/wb-base >/dev/null; then base=wb-base; fi; git diff --binary --full-index "$base"..HEAD > /work/out.patch';
+export const SANDBOX_SCRIPTS = { RESTORE, HARVEST };
 
 /**
  * @param {{provider:any, task:{id:number,title?:string}, runId?:number, project:string, branch:string, plan:any, prompt:string,
  *          timeoutMs:number, onLine:(line:string)=>void, onBox?:(box:any)=>void, gitRun:(cwd:string,...a:string[])=>string, tmpRoot?:string,
  *          diskMb?:number, diskEveryMs?:number}} o
- * @returns {Promise<{code:number, killed:boolean, patch:string, problem:string}>}
+ * @returns {Promise<{code:number, killed:boolean, patch:Buffer|string, problem:string}>}  成功时 patch 是原样字节（Buffer）；出问题时是空串
  */
 export async function runInSandbox(o) {
   if (!BRANCH_RE.test(o.branch)) return { code: -1, killed: false, patch: '', problem: `分支名不对：${safeLabel(o.branch, 40)}` };
@@ -169,6 +180,30 @@ export async function runInSandbox(o) {
     const setup = await box.exec(['sh', '-c', SETUP, 'sh', o.branch, SANDBOX_REPO], { cwd: '/work', onLine: (l) => setupLines.push(l), timeoutMs: 5 * 60_000 });
     if (setup.code !== 0) return { code: setup.code, killed: false, patch: '', problem: `沙箱里克隆代码失败：${safeLabel(setupLines.slice(-3).join(' '), 200)}` };
 
+    // 054.8 / 062：资料文件（Issue 原文、要审的补丁、审查意见）。位置只许这三个，别的一律不放。
+    const materials = [...(o.material?.text ? [o.material] : []), ...(Array.isArray(o.materials) ? o.materials : [])].filter((m) => m?.text);
+    if (materials.length) {
+      if (materials.some((m) => !MATERIAL_PATHS.includes(m.path))) return { code: -1, killed: false, patch: '', problem: '资料文件的位置不对' };
+      const made = await box.exec(['sh', '-c', MATERIAL_DIR, 'sh', SANDBOX_REPO], { cwd: '/work', timeoutMs: 60_000 });
+      if (made.code !== 0) return { code: made.code, killed: false, patch: '', problem: '沙箱里放不进资料文件' };
+      for (const m of materials) await box.writeFile(`${SANDBOX_REPO}/${m.path}`, m.text);
+    }
+    // restored：要求恢复时，恢复成没成（不要求时为 null）。宿主据此判断补丁的起点对不对得上。
+    let restored = null;
+    if (o.restore) {
+      // 恢复不了不算任务失败，但必须明说：留一份说明文件，提示词会叫它先读。
+      restored = false;
+      if (materials.some((m) => m.path === '.wb/previous.patch')) {
+        const r = await box.exec(['sh', '-c', RESTORE, 'sh', SANDBOX_REPO], { cwd: '/work', timeoutMs: 5 * 60_000 }).catch(() => null);
+        restored = r?.code === 0;
+      }
+      if (!restored) {
+        const made = await box.exec(['sh', '-c', MATERIAL_DIR, 'sh', SANDBOX_REPO], { cwd: '/work', timeoutMs: 60_000 });
+        if (made.code !== 0) return { code: made.code, killed: false, patch: '', problem: '沙箱里放不进资料文件' };
+        await box.writeFile(`${SANDBOX_REPO}/.wb/restore-failed.txt`, RESTORE_FAILED);
+      }
+    }
+
     let full = 0;
     const limitMb = o.diskMb ?? DISK_DEFAULT_MB;
     const stopWatch = watchDisk(box, { limitMb, everyMs: o.diskEveryMs ?? 60_000, onOver: async (mb) => { full = mb; await box.kill?.(); } });
@@ -183,10 +218,24 @@ export async function runInSandbox(o) {
     const harvestLines = [];
     const h = await box.exec(['sh', '-c', HARVEST, 'sh', msg, SANDBOX_REPO], { cwd: '/work', onLine: (l) => harvestLines.push(l), timeoutMs: 5 * 60_000 });
     if (h.code !== 0) return { code: run.code, killed: run.timedOut, patch: '', problem: `从沙箱里取改动失败：${safeLabel(harvestLines.slice(-3).join(' '), 200)}` };
+    // 066：改动已经收进 /work/out.patch 了，这时候再在容器里把测试跑一遍——测试生成的文件不会进补丁。
+    // 容器本身是隔离，所以不管它有没有改测试命令；跑不起来（没装依赖、没网络）会如实记成没过，由人判断。
+    let verify = null;
+    if (o.verify?.cmd?.length && run.code === 0 && !run.timedOut) {
+      const lines = [];
+      const started = Date.now();
+      try {
+        const v = await box.exec(o.verify.cmd, { cwd: SANDBOX_REPO, onLine: (l) => { lines.push(l); if (lines.length > 400) lines.shift(); }, timeoutMs: o.verify.timeoutMs });
+        verify = { status: v.timedOut ? 'timeout' : v.code === 0 ? 'pass' : 'fail', code: typeof v.code === 'number' ? v.code : -1, tail: lines.join('\n').slice(-1500), ms: Date.now() - started };
+      } catch (err) {
+        verify = { status: 'error', code: -1, tail: safeLabel(err?.message ?? err, 200), ms: Date.now() - started };
+      }
+    }
     const out = join(tmp, 'out');
     mkdirSync(out);
     const file = await box.copyOut('/work/out.patch', out);
-    return { code: run.code, killed: run.timedOut, patch: readFileSync(file, 'utf8'), problem: '' };
+    // 按字节取（Buffer）：补丁里可能有非 UTF-8 的文本（GBK 等），按字符串读一遍就成了替换字符，套回宿主就是坏文件。
+    return { code: run.code, killed: run.timedOut, patch: readFileSync(file), problem: '', verify, restored };
   } catch (err) {
     return { code: -1, killed: false, patch: '', problem: `沙箱出错：${safeLabel(err?.message ?? err, 200)}` };
   } finally {
@@ -200,14 +249,19 @@ export async function runInSandbox(o) {
  * @returns {{ok:true, empty:boolean, flags:{code:string,label:string,path:string}[], files:string[]} | {ok:false, reasons:string[], saved:string}}
  */
 export function applySandboxPatch({ dir, patch, taskId, gitRun, rejectsDir, tmpRoot }) {
-  if (!patch || !patch.trim()) return { ok: true, empty: true, flags: [], files: [] };
-  const r = inspectPatch(patch);
+  // 两份：bytes 是容器里出来的原样字节，存盘、套用都只用它；text 是按 UTF-8 解出来给检查器看的。
+  // 检查器只认结构行（diff --git、文件头、模式、@@），这些都是 ASCII，解码不会改变它们；
+  // 非 UTF-8 的内容行在 text 里会变成替换字符，但换行不会多也不会少，所以检查到的结构和 git 套用的是同一份。
+  const bytes = Buffer.isBuffer(patch) ? patch : Buffer.from(String(patch ?? ''), 'utf8');
+  const text = bytes.toString('utf8');
+  if (!text.trim()) return { ok: true, empty: true, flags: [], files: [] };
+  const r = inspectPatch(text);
   if (!r.ok) {
     let saved = '';
     try {
       mkdirSync(rejectsDir, { recursive: true });
       saved = join(rejectsDir, `T-${Number(taskId)}-${Date.now()}.patch`);
-      writeFileSync(saved, patch, 'utf8');
+      writeFileSync(saved, bytes);
     } catch { saved = ''; }
     return { ok: false, reasons: r.reasons, saved };
   }
@@ -216,7 +270,7 @@ export function applySandboxPatch({ dir, patch, taskId, gitRun, rejectsDir, tmpR
     const hooks = join(tmp, 'no-hooks');
     mkdirSync(hooks);
     const file = join(tmp, 'sandbox.patch');
-    writeFileSync(file, patch, 'utf8');
+    writeFileSync(file, bytes);
     // 046 真机复测：只套到暂存区（--cached），不碰工作区——工作区是按宿主的换行设置检出的（Windows 默认 CRLF），
     // 补丁是容器里按原样出的，直接拿工作区对补丁会「对不上」。提交后再把工作区按宿主设置重新检出。
     // 不再强行改 core.autocrlf：检出和套用用同一套宿主设置，才不会自相矛盾。

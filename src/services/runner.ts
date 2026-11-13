@@ -2,7 +2,9 @@
 import { db, tx } from '../db.ts';
 import { catLabel, execLabel, fmtDateTime, nowIso, truncate } from '../domain.ts';
 import { HttpError, logEvent } from './core.ts';
-import { createApproval } from './approvals.ts';
+import { autoApproveReviewed, createApproval, docsOnly, expireApproval, listApprovals } from './approvals.ts';
+import { addSay, finishReview, startReview, sweepReviews } from './review.ts';
+import { normalizeVerify } from './verify.ts';
 import { getTask, updateTask, type Task } from './tasks.ts';
 import { autoPaused, getSetting, quotaBlock, setSetting } from './dispatch.ts';
 import { notifyHandoffMissed } from './notify.ts';
@@ -10,7 +12,7 @@ import { tokensByExecutorSince } from './metrics.ts';
 import { cleanLogLine, cleanResult } from './redact.ts';
 import { lastDays } from '../domain.ts';
 import { rerouteForQuota } from './brain.ts';
-import { closeRun, markSlotLimited, openRun, setRunTokens, slotBlock } from './runs.ts';
+import { closeRun, markSlotLimited, openRun, openRunOf, setRunTokens, slotBlock } from './runs.ts';
 
 export const RUNNER_FRESH_MS = 90_000; // heartbeat every 30s; two missed beats = offline
 
@@ -63,6 +65,8 @@ export function queueBlocker(
   // 045：配了账号槽、但全都到上限 / 到期 / 停用。
   const slots = slotBlock(t.executor);
   if (slots) return { code: 'slots', text: `「${who}」${slots}` };
+  const readiness = !t.retry && notReadyReason(t.executor);
+  if (readiness) return { code: 'not-ready', text: readiness };
   if (dailyCapReached(t.executor)) return { code: 'cap', text: `「${who}」今天的额度用完了，明天才会继续领` };
   if (!t.retry && s.max_concurrent && activeCoding(t.executor) >= s.max_concurrent) {
     return { code: 'busy', text: `「${who}」同时在跑的任务已满（上限 ${s.max_concurrent} 个）` };
@@ -72,6 +76,24 @@ export function queueBlocker(
 
 
 export type RunnerRow = { id: string; last_seen: string; meta: string };
+
+/** 只认新鲜心跳中的明确失败；一台未就绪不能误挡另一台，旧版未上报时保持兼容。 */
+function notReadyReason(executor: string, runnerId?: string): string {
+  const rows = db().prepare('SELECT id, last_seen, meta FROM runners ORDER BY last_seen DESC').all() as RunnerRow[];
+  const reasons: string[] = [];
+  for (const r of rows) {
+    if (runnerId && r.id !== runnerId) continue;
+    if (Date.now() - Date.parse(r.last_seen) >= RUNNER_FRESH_MS) continue;
+    try {
+      const meta = JSON.parse(r.meta);
+      if (!Array.isArray(meta.executors) || !meta.executors.includes(executor)) continue;
+      const state = meta.readiness?.[executor];
+      if (state?.ready !== false) return '';
+      reasons.push(cleanResult(String(state.reason || '工具还没就绪'), 160));
+    } catch { /* 不能从坏 JSON 猜出未登录。 */ }
+  }
+  return reasons.length ? `「${execLabel(executor)}」尚未就绪：${reasons[0]}` : '';
+}
 
 // ---------- 035.3：部署之后的「接班」 ----------
 
@@ -279,6 +301,7 @@ export function heartbeat(id: string, meta?: unknown): RunnerRow {
   const metaText = typeof meta === 'string' ? meta : JSON.stringify(meta ?? {});
   db().prepare(`INSERT INTO runners (id, last_seen, meta) VALUES (?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET last_seen = excluded.last_seen, meta = excluded.meta`).run(rid, nowIso(), metaText.slice(0, 2000));
+  sweepReviews(); // 062：没人开页面时，也靠别的执行器的心跳把失联的审查收掉
   // 035.3：这一跳正好证明了「新执行器来了」——部署后那条「等待接班」的提示到这里才该消失。
   settleHandoff(rid, metaText);
   return { id: rid, last_seen: nowIso(), meta: metaText };
@@ -353,17 +376,17 @@ function dailyCapReached(executor: string): boolean {
  * 042：额度不够、你又亲手选了这个执行者——不换人，只把原因写到 `step` 上（033 的原因显示会读它）。
  * 每轮轮询都会走到这里，所以只在文字变了时写一次，不然审计会被刷屏。
  */
-function noteQuotaWait(id: number, text: string): void {
+function noteQuotaWait(id: number, text: string, kind = 'dispatch.quota_wait'): void {
   const t = getTask(id);
   if (!t || t.step === text) return;
   db().prepare('UPDATE tasks SET step = ?, updated_at = ? WHERE id = ?').run(text, nowIso(), id);
-  logEvent({ actor: 'system', kind: 'dispatch.quota_wait', task_id: id, text: `T-${id} ${text}` });
+  logEvent({ actor: 'system', kind, task_id: id, text: `T-${id} ${text}` });
 }
 
 /**
  * Claim one task. Check the executor cap and reserve the run in the same transaction.
  */
-export function claimTask(executors: string[], runnerId: string): Task | null {
+export function claimTask(executors: string[], runnerId: string, notReady: string[] = [], busyCoding: number[] = []): Task | null {
   if (autoPaused()) return null;
   // No ?executors= means "any executor this workbench is allowed to run" — the per-task
   // auto_allowed check below decides whether a task may start without a person.
@@ -386,6 +409,8 @@ export function claimTask(executors: string[], runnerId: string): Task | null {
     { id: number; executor: string; category: string; mode: string; start_requested: number; route: string; retry: Task['retry'] }[];
 
   for (const row of rows) {
+    // 状态已停止不等于本机 CLI 已退出；退出前不能复用同一个工作目录。
+    if (busyCoding.includes(row.id)) { noteQuotaWait(row.id, '上一轮还在收尾，等进程退出后再开始'); continue; }
     const setting = db().prepare('SELECT categories FROM executor_settings WHERE executor = ?')
       .get(row.executor) as { categories: string } | undefined;
     const cats = (setting?.categories ?? '').split(',').filter(Boolean);
@@ -401,11 +426,19 @@ export function claimTask(executors: string[], runnerId: string): Task | null {
     // 045：顺序和 queueBlocker 一致——额度之后、每日上限之前。
     const slots = slotBlock(row.executor);
     if (slots) { noteQuotaWait(row.id, slots); continue; }
+    const readiness = !row.retry && (notReady.includes(row.executor)
+      ? `「${execLabel(row.executor)}」尚未就绪，等登录检查恢复`
+      : notReadyReason(row.executor, runnerId));
+    if (readiness) { noteQuotaWait(row.id, readiness, 'runner.not_ready'); continue; }
     if (dailyCapReached(row.executor)) continue;
     const claimed = tx(() => {
       const limit = (db().prepare('SELECT max_concurrent FROM executor_settings WHERE executor = ?')
         .get(row.executor) as { max_concurrent: number | null } | undefined)?.max_concurrent;
-      if (!row.retry && limit && activeCoding(row.executor) >= limit) return null;
+      const draining = busyCoding.filter((id) => {
+        const t = getTask(id);
+        return t?.executor === row.executor && t.runner_id === runnerId && !openRunOf(id);
+      }).length;
+      if (!row.retry && limit && activeCoding(row.executor) + draining >= limit) return null;
       // 041.1：只在还没有归属时写 first_executor，重试、换人都不覆盖第一次开跑的人。
       const claim = db().prepare(`UPDATE tasks SET status = 'running', runner_id = ?, started_at = ?,
         first_executor = COALESCE(NULLIF(first_executor, ''), ?),
@@ -417,16 +450,26 @@ export function claimTask(executors: string[], runnerId: string): Task | null {
       else openRun(row.id, row.executor, row.route === 'brain' ? 'brain' : row.start_requested ? 'me' : 'rule');
       logEvent({ actor: 'system', kind: 'task.claimed', task_id: row.id, text: `执行器 ${runnerId} 领走 T-${row.id}` });
       appendTaskLog(row.id, `执行器 ${runnerId} 领走，开始执行`);
-      return getTask(row.id)!;
+      return { ...getTask(row.id)!, ...(row.retry ? {} : { run_id: openRunOf(row.id)?.id }) };
     });
     if (claimed) return claimed;
   }
   return null;
 }
 
+/** 新执行器逐次绑定 run id；老执行器至少不能复活人工停止后的任务。 */
+export function staleRunReport(task: Task, runId: unknown): boolean {
+  if (runId !== undefined) return !Number.isSafeInteger(runId) || Number(runId) <= 0 || openRunOf(task.id)?.id !== runId;
+  if (task.status !== 'failed') return false;
+  const last = db().prepare(`SELECT kind FROM events WHERE task_id = ?
+    AND kind IN ('task.stopped', 'task.claimed') ORDER BY id DESC LIMIT 1`).get(task.id) as { kind: string } | undefined;
+  return last?.kind === 'task.stopped';
+}
+
 export function reportProgress(id: number, body: Record<string, unknown>): Task {
   const task = getTask(id);
   if (!task) throw new HttpError(404, `没有任务 T-${id}`);
+  if (staleRunReport(task, body.run_id)) return task;
   const step = String(body.step ?? '').slice(0, 300);
   const progress = body.progress === undefined ? undefined : Math.min(100, Math.max(0, Math.round(Number(body.progress) || 0)));
   const tokens = body.tokens_used === undefined ? undefined : Math.max(0, Math.round(Number(body.tokens_used) || 0));
@@ -448,7 +491,10 @@ export function reportProgress(id: number, body: Record<string, unknown>): Task 
 }
 
 export type FinishInput = {
+  run_id?: number;
   result?: string; summary?: string; branch?: string; diff_stat?: string; tests?: string;
+  /** 066：执行器自己跑测试的结果。 */
+  verify?: unknown;
   /** The commit the run ended on. Approval is for this exact tree, not for the branch tip later. */
   commit?: string;
   /** 017: the backend that actually produced this run (bailian / deepseek). */
@@ -517,7 +563,8 @@ export function hollowRun(task: Pick<Task, 'answer_only' | 'route_read_only'>, i
   const denials = [...new Set((Array.isArray(input.denials) ? input.denials : []).map((d) => String(d).trim()).filter(Boolean))].slice(0, 5);
   if (denials.length) return `被拦住了：${denials.join('、')} 没有放行，什么都没写成。去设置 › 安全看是哪条规则，放开后点重试`;
   const answerOnly = task.answer_only === 1 || task.route_read_only === 1;
-  if (!answerOnly) return '没有产出任何文件。如果这件事只需要一个回答，勾上「只要一个回答」再重试';
+  // 061.1：「只要回答」从界面上删了（工作台不是问答器）。没产出文件就是没成，办法在详情里选。
+  if (!answerOnly) return '没有产出任何文件';
   return '';
 }
 
@@ -548,6 +595,7 @@ export function finishTask(id: number, input: FinishInput): { task: Task; approv
   if (!task) throw new HttpError(404, `没有任务 T-${id}`);
   const finishKey = /^[A-Za-z0-9_-]{8,64}$/.test(String(input.finish_key ?? '')) ? String(input.finish_key) : '';
   if (finishKey && (task as any).finish_key === finishKey) return { task, duplicate: true } as any;
+  if (staleRunReport(task, input.run_id)) return { task, duplicate: true, ignored: true } as any;
   if (finishKey) db().prepare('UPDATE tasks SET finish_key = ? WHERE id = ?').run(finishKey, id);
   if (input.result === 'limited') {
     const r = finishLimited(task, input);
@@ -578,6 +626,17 @@ export function finishTask(id: number, input: FinishInput): { task: Task; approv
   // 039: 只改文档的合并审批会被审批服务自己过掉，所以这里拿到的是「已通过」——step 要说清为什么没等你。
   let autoMerged = false;
   if (ok && !noChanges) {
+    // 039：这次改了哪些文件（沙箱出来的、太多的，都当「有代码改动」）。
+    const changed = (() => {
+      // 沙箱补丁出容器必须人批。文档路径也可能触发宿主 Git 过滤器。
+      if (input.sandbox === 'docker' || input.sandbox === 'vm') return [] as string[];
+      const files = Array.isArray(input.changed_files) ? input.changed_files.map(String) : [];
+      // 039：超过 500 个文件的任务不猜——直接当「有代码改动」，让人点。截断清单再判定等于拿半份证据放行。
+      return files.length > 500 ? [] : files;
+    })();
+    // 062：要审的任务，只改文档也先不自动过——等另一位审过再说（见 autoApproveReviewed）。
+    // 以前是「只改文档就直接合并、跳过审查」：你点了谁来审，它却没审，这不对。
+    const reviewFirst = !!task.reviewer && !task.review_of;
     const approval = createApproval({
       title: `合并 ${branch} 到 main`,
       summary: [
@@ -590,14 +649,9 @@ export function finishTask(id: number, input: FinishInput): { task: Task; approv
       executor: task.executor,
       task_id: id,
       tool_name: 'git merge',
-      tool_input: { branch, commit },
-      changed_files: (() => {
-        // 沙箱补丁出容器必须人批。文档路径也可能触发宿主 Git 过滤器。
-        if (input.sandbox === 'docker' || input.sandbox === 'vm') return [];
-        const files = Array.isArray(input.changed_files) ? input.changed_files.map(String) : [];
-        // 039：超过 500 个文件的任务不猜——直接当「有代码改动」，让人点。截断清单再判定等于拿半份证据放行。
-        return files.length > 500 ? [] : files;
-      })(),
+      tool_input: { branch, commit, ...(reviewFirst && docsOnly(changed) ? { docs_files: changed.length } : {}) },
+      // 066：自己跑测试没过的，不走「只改文档自动通过」。
+      changed_files: reviewFirst || normalizeVerify(input.verify)?.status === 'fail' ? [] : changed,
     });
     approvalId = approval.id;
     autoMerged = approval.status === 'approved';
@@ -638,7 +692,43 @@ export function finishTask(id: number, input: FinishInput): { task: Task; approv
     text: `T-${id}「${truncate(task.title, 40)}」${ok ? (noChanges ? '执行完成（没有改动）'
       : autoMerged ? '执行完成，只改文档，合并自动通过' : '执行完成，等待合并审批') : '执行失败'}${backend ? `（后端 ${backend}）` : ''}`,
   });
+  // 066：执行器自己跑测试的结果，每一轮覆盖（没报就清空——上一轮的结果不能冒充这一轮的）。
+  if (!task.review_of) {
+    const v = ok ? normalizeVerify(input.verify) : null;
+    db().prepare('UPDATE tasks SET verify = ? WHERE id = ?').run(v ? JSON.stringify(v) : '', id);
+  }
+  // 062：这一轮它最后说的话，记进线程（审别人的那件不记——它的话就是审查意见）。
+  if (!task.review_of) addSay(id, task.executor, resultText || (ok ? '' : summary));
+  // 062：这件事本身就是在审别人的——按结论推进被审的那件；它自己不产生合并审批（只读）。
+  if (task.review_of) {
+    finishReview(getTask(id)!, resultText, ok, (parentId) => {
+      for (const a of listApprovals({ status: 'pending', task_id: parentId })) if (a.tool_name === 'git merge') expireApproval(a.id);
+    }, (parentId) => {
+      // 审过了：只改文档的，这时候才按规则自己过。
+      if (autoApproveReviewed(parentId)) {
+        updateTask(parentId, { step: '已完成，另一位审过，文档改动自动通过合并审批（推送仍要你点）' }, 'system');
+        appendTaskLog(parentId, '审过了，只改了文档，合并自动通过');
+      }
+    });
+  } else if (ok && !noChanges && task.reviewer && !autoMerged) {
+    // 062：干活的做完了、有改动、要审：先交给另一位看，审过了才到你这里。
+    startReview(getTask(id)!);
+  }
+  // 061.3：能自己好的失败先自动重试一次，不进「等你」。没产出、额度用完、被规则拦下这些不算——重试也是一样的结果。
+  if (!ok && !hollow && input.result !== 'limited' && transientFailure(summary) && (task.auto_retries ?? 0) < AUTO_RETRY_MAX) {
+    const n = (task.auto_retries ?? 0) + 1;
+    db().prepare('UPDATE tasks SET auto_retries = ? WHERE id = ?').run(n, id);
+    updateTask(id, { status: 'queued', start_requested: 1, retry: null, step: `刚才没成（${truncate(summary, 60)}），自动重试第 ${n} 次` }, 'system');
+    appendTaskLog(id, `自动重试第 ${n} 次`);
+    logEvent({ actor: 'system', kind: 'task.auto_retry', task_id: id, text: `T-${id} 自动重试第 ${n} 次：${truncate(summary, 80)}` });
+  }
   return { task: getTask(id)!, approval_id: approvalId };
+}
+
+export const AUTO_RETRY_MAX = 1;
+/** 这次失败像不像「再来一次就好」：超时、断网、接口忙。别的（没产出、冲突、测试不过、被拦）都要你来定。 */
+export function transientFailure(reason: string): boolean {
+  return /超时|断网|网络|连不上|掉线|timed? ?out|ETIMEDOUT|ECONNRESET|ECONNREFUSED|EAI_AGAIN|socket hang up|fetch failed|network|overloaded|rate.?limit|\b(429|502|503|504|529)\b/i.test(String(reason ?? ''));
 }
 
 /** Where the runner's log lives, so the task page can say "look here" without shipping keys. */

@@ -29,6 +29,16 @@ const event = (step, status, detail, extra) => {
   if (jsonMode) console.log(JSON.stringify({ step, status, ...(detail ? { detail } : {}), ...(extra ?? {}) }));
   else if (detail) console.log(`  ${status === 'ok' ? '✓' : status === 'bad' || status === 'missing' ? '✗' : '·'} ${detail}`);
 };
+
+// 054：隐藏启动器。把 launch-hidden.vbs 装到 %LOCALAPPDATA%\ai-workbench\（仓库外），
+// 执行器/看护两个计划任务存在就把动作换成它，从此计划任务不再带出黑色终端窗口。
+// 幂等；没装过执行器就只装文件；失败只提示，不拦 setup。
+function installLauncherStep() {
+  if (process.platform !== 'win32') return;
+  const r = spawnSync(process.execPath, [join(ROOT, 'scripts', 'install-launcher.mjs')], { encoding: 'utf8' });
+  const out = (r.stdout ?? '').trim();
+  if (out) event('launcher', r.status === 0 ? 'ok' : 'bad', out.split(/\r?\n/).join('；'));
+}
 const finish = (code) => process.exit(code);
 
 const HELP = `用法：
@@ -204,6 +214,7 @@ async function interactive() {
   if (keyFile) { try { writeFileSync(keyFile, ''); } catch { /* best effort */ } }
 
   if (res.code === EXIT.ok) {
+    if (!opts.dryRun) installLauncherStep();
     say('\n接下来：');
     for (const line of res.summary.next) say(`  · ${line}`);
     const go = await (async () => {
@@ -249,6 +260,7 @@ async function main() {
     // nothing extra: the failing step already said what is wrong
   }
   const keyEnv = BACKENDS[opts.backend ?? 'deepseek'].envKey;
+  if (res.code === EXIT.ok && !opts.dryRun) installLauncherStep();
   if (jsonMode) console.log(JSON.stringify(res.summary));
   else if (res.code === EXIT.ok) for (const line of res.summary.next ?? []) console.log(`  · ${line}`);
   if (res.code !== EXIT.ok && !jsonMode) console.log(`\n没装完。key 在环境变量 ${keyEnv} 里给了吗？`);

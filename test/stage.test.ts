@@ -133,7 +133,8 @@ describe('018 · 执行器在线与否', () => {
       body: JSON.stringify({ runner: 'r-1' }),
     });
     // 044 v3：在线是常态，只在工作台日期前点亮一盏小灯（不再占一行字）。
-    const home = await (await get('/')).text();
+    // 061.1：小灯在原来的首页里；新首页在线时什么都不说（头像排上的亮点在 061.4）。
+    const home = await (await get('/?view=classic')).text();
     assert.match(home, /class="runner-lamp on"[^>]*aria-label="执行器在线"/);
     for (const path of ['/tasks', '/']) assert.doesNotMatch(await (await get(path)).text(), /执行器没开/, path);
   });

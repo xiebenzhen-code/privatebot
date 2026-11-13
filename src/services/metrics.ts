@@ -3,6 +3,7 @@ import { mediaPulse } from './media.ts';
 import { db, tx } from '../db.ts';
 import { AGENT_EXECUTORS, EXECUTORS, dayOf, lastDays, nowIso } from '../domain.ts';
 import { HttpError, int, logEvent, oneOf, str } from './core.ts';
+import { waitingCount } from './stream.ts';
 
 // ---------- usage ----------
 
@@ -493,4 +494,28 @@ export function pulse(): string {
     (SELECT IFNULL(last_run, '') FROM connector_state WHERE name = 'github') gh,
     (SELECT IFNULL(checked_at, '') FROM selfdev_state WHERE id = 1) sd`).get() as Record<string, string | number>;
   return `${r.t}|${r.e}|${r.m}|${r.u}|${r.a}|${r.s}|${r.l}|${r.p}|${r.r}|${r.gh ?? ''}|${r.sd ?? ''}|${mediaPulse()}`;
+}
+
+/**
+ * 角色要的两个数：真正在跑几个、等你拍板几个；再带「最后完成 / 最后失败」是哪一单。
+ * 只读，不碰任何调度；页面拿它决定 PrivateBot 摆什么姿态。
+ * 最后那两单的标识是给前端认「刚刚真的完成了一次」用的——第一次拿到快照不放庆祝，
+ * 之后只有这个标识换人了才算数，避免把「本来就有历史完成记录」当成刚发生的事。
+ */
+export function botSnapshot(): { running: number; waiting: number; lastDone: string | null; lastFail: string | null } {
+  const r = db().prepare(`SELECT
+    (SELECT COUNT(*) FROM tasks WHERE status = 'running') running,
+    (SELECT COUNT(*) FROM approvals WHERE status = 'pending') ask,
+    (SELECT COUNT(*) FROM tasks WHERE status = 'asking') mine,
+    (SELECT id || '@' || IFNULL(completed_at, '') FROM tasks WHERE status = 'done' ORDER BY IFNULL(completed_at, '') DESC LIMIT 1) lastDone,
+    (SELECT id || '@' || IFNULL(completed_at, '') FROM tasks WHERE status = 'failed' ORDER BY IFNULL(completed_at, '') DESC LIMIT 1) lastFail`).get() as {
+    running: number; ask: number; mine: number; lastDone: string | null; lastFail: string | null;
+  };
+  return {
+    running: r.running,
+    // 061.1：和侧栏、首页同一个数（services/stream.ts 的「等你」）。
+    waiting: waitingCount(),
+    lastDone: r.lastDone ?? null,
+    lastFail: r.lastFail ?? null,
+  };
 }

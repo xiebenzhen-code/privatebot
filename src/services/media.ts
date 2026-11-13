@@ -4,7 +4,7 @@
 // media_accounts（账号名和粉丝数的快照，只追加）。数据第一版全靠手动录入——国内平台没有给个人的数据接口，
 // 爬虫和第三方数据服务一律不用（055 单「数据从哪来」）。
 import { db, tx } from '../db.ts';
-import { MEDIA_PLATFORMS, mediaLabel, nowIso } from '../domain.ts';
+import { MEDIA_PLATFORMS, mediaLabel, nowIso, stampOf } from '../domain.ts';
 import { HttpError, logEvent } from './core.ts';
 
 export const METRICS = ['views', 'likes', 'comments', 'shares', 'saves', 'followers'] as const;
@@ -37,11 +37,26 @@ function urlOf(v: unknown): string {
   if (s.length > 500 || !/^https?:\/\/[^\s<>"']+$/i.test(s)) throw new HttpError(400, '链接要以 http:// 或 https:// 开头');
   return s;
 }
+function localNoon(day: string): number {
+  const target = Date.parse(`${day}T12:00:00Z`);
+  if (!Number.isFinite(target) || new Date(target).toISOString().slice(0, 10) !== day) return NaN;
+  let instant = target;
+  // 用工作台时钟反推时差，再验证确实落在所选日期的中午。
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const { date, time } = stampOf(new Date(instant));
+    if (date === day && time === '1200') return instant;
+    const wallClock = Date.parse(`${date}T${time.slice(0, 2)}:${time.slice(2)}:00Z`);
+    if (!Number.isFinite(wallClock)) return NaN;
+    instant += target - wallClock;
+  }
+  return NaN;
+}
+
 /** 日期：YYYY-MM-DD 或完整时间；不填就是现在。不收未来超过一天的时间。 */
 function whenOf(v: unknown, field: string): string {
   const s = String(v ?? '').trim();
   if (!s) return nowIso();
-  const t = Date.parse(/^\d{4}-\d{2}-\d{2}$/.test(s) ? `${s}T12:00:00+08:00` : s);
+  const t = /^\d{4}-\d{2}-\d{2}$/.test(s) ? localNoon(s) : Date.parse(s);
   if (!Number.isFinite(t)) throw new HttpError(400, `${field}看不懂：${s.slice(0, 30)}`);
   if (t > Date.now() + 86400000) throw new HttpError(400, `${field}不能是未来`);
   return new Date(t).toISOString();

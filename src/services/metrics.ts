@@ -4,6 +4,7 @@ import { db, tx } from '../db.ts';
 import { AGENT_EXECUTORS, EXECUTORS, dayOf, lastDays, nowIso } from '../domain.ts';
 import { HttpError, int, logEvent, oneOf, str } from './core.ts';
 import { waitingCount } from './stream.ts';
+import { endedWindow, factsOf, judge } from './scorecard.ts';
 
 // ---------- usage ----------
 
@@ -411,17 +412,14 @@ export type Outcome = 'once' | 'fix' | 'me' | 'fail';
 export type LedgerItem = { id: number; title: string; executor: string; day: string; tokens: number; outcome: Outcome };
 export function ledger(days: number): { items: LedgerItem[]; days: string[] } {
   const ds = lastDays(days);
-  const since = new Date(Date.now() - (days + 1) * 86400000).toISOString();
-  const rows = db().prepare(`SELECT id, title, executor, first_executor, status, completed_at, tokens_used FROM tasks
-    WHERE status IN ('done', 'failed') AND completed_at IS NOT NULL AND completed_at >= ? ORDER BY completed_at DESC`).all(since) as
-    { id: number; title: string; executor: string; first_executor: string | null; status: string; completed_at: string; tokens_used: number }[];
-  const dec = db().prepare(`SELECT task_id, status FROM approvals WHERE task_id IS NOT NULL AND status IN ('changes', 'takeover') AND created_at >= ?`).all(since) as { task_id: number; status: string }[];
-  const fixed = new Set(dec.filter((d) => d.status === 'changes').map((d) => d.task_id));
-  const taken = new Set(dec.filter((d) => d.status === 'takeover').map((d) => d.task_id));
+  const { ended: rows } = endedWindow(days, undefined, { by: 'finished' });
+  const facts = factsOf(rows.map((r) => r.id));
   const inRange = new Set(ds);
   const items = rows.map((r) => ({
-    id: r.id, title: r.title, executor: r.first_executor || r.executor, day: dayOf(r.completed_at), tokens: r.tokens_used || 0,
-    outcome: (r.status === 'failed' ? 'fail' : taken.has(r.id) || r.executor === 'me' ? 'me' : fixed.has(r.id) ? 'fix' : 'once') as Outcome,
+    // 分桶日按任务真正完成的那一天（`finished_at`），不是首轮结束日：
+    // 跨周的活今天才做完，就得算在这周，否则它从「这周做完几件」里整单消失。统计值仍取首轮。
+    id: r.id, title: r.title, executor: r.first_executor || r.executor, day: dayOf(r.finished_at ?? r.completed_at!), tokens: r.tokens_used || 0,
+    outcome: (r.executor === 'me' ? 'me' : { failed: 'fail', takeover: 'me', rework: 'fix', first_pass: 'once', unfinished: 'once' }[judge(r, facts.get(r.id))]) as Outcome,
   })).filter((x) => inRange.has(x.day));
   return { items, days: ds };
 }

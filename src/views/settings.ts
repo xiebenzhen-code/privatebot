@@ -49,10 +49,10 @@ export function settingsHome(): Safe {
   </div>`;
 }
 
-export function settingsPage(baseUrl: string, tab: SettingsTab, collapsed = false): Safe {
+export function settingsPage(baseUrl: string, tab: SettingsTab): Safe {
   if (tab === 'security') return securityPanel();
   if (tab === 'notify') return notifyPanel();
-  if (tab === 'appearance') return appearancePanel(collapsed);
+  if (tab === 'appearance') return appearancePanel();
   if (tab === 'backup') return backupPanel();
   return integrationsPanel(baseUrl);
 }
@@ -401,12 +401,12 @@ function notifyPanel(): Safe {
 
 const SECTION_ITEMS: [string, string][] = [['inbox', '审批'], ['board', '看板'], ['mine', '我的待办'], ['done', '已完成'], ['executors', '执行者'], ['accounts', '账号与额度']];
 
-function appearancePanel(collapsed: boolean): Safe {
+function appearancePanel(): Safe {
   const l = labels();
   const crew = crewPreset();
   return html`
   <header class="page-head"><div><span class="eyebrow">SETTINGS · 外观</span><h1>${tabLabel('appearance')}</h1>
-    <p class="lede">只改界面上的字和侧边栏的样子，内部的 key、接口、审计都不变。</p></div></header>
+    <p class="lede">只改界面上的叫法和深浅色，内部的 key、接口、审计都不变。</p></div></header>
 
   <section class="panel">
     <div class="panel-head"><h2>称呼</h2><span class="meta">预设和自定义；留空就用预设的写法，限 1–12 个字</span></div>
@@ -425,16 +425,7 @@ function appearancePanel(collapsed: boolean): Safe {
       </div>
       <div class="actions"><button class="btn primary">保存称呼</button></div>
     </form>
-    <p class="hint">改名后侧边栏、分段标签、看板列和概览卡片会一起变。</p>
-  </section>
-
-  <section class="panel">
-    <div class="panel-head"><h2>侧边栏</h2><span class="meta">现在默认${collapsed ? '收起' : '展开'}</span></div>
-    <p class="hint">桌面宽度下侧边栏可以收成图标条；手机宽度下会自动变成底部标签栏。</p>
-    <div class="seg inline" role="group" aria-label="侧边栏默认状态">
-      <button type="button" class="seg-item ${collapsed ? '' : 'on'}" data-side-default="open">默认展开</button>
-      <button type="button" class="seg-item ${collapsed ? 'on' : ''}" data-side-default="collapsed">默认收起</button>
-    </div>
+    <p class="hint">改名后分段标签、任务卡和概览会一起变。</p>
   </section>
 
   <section class="panel">
@@ -490,7 +481,10 @@ function backupPanel(): Safe {
 export function loginPage(error?: string): string {
   return html`<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>登录 · 我的工作台</title><link rel="stylesheet" href="/static/style.css"></head>
+<title>登录 · 我的工作台</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' rx='22' fill='%231E5B4A'/%3E%3Cpath d='M34 72V28h16a14 14 0 0 1 0 28H34' fill='none' stroke='%23F4F1EA' stroke-width='10' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='68' cy='68' r='7' fill='%239CCDB8'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
+<link rel="stylesheet" href="/static/style.css"></head>
 <body class="login-body">
 <form class="login" method="post" action="/login">
   <span class="brand-p-wrap">${brandMark(56)}</span>

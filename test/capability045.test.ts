@@ -77,6 +77,8 @@ function finished(o: {
   const end = new Date(now.getTime() - (o.daysAgo ?? 1) * DAY).toISOString();
   const start = new Date(new Date(end).getTime() - 600000).toISOString();
   D.db().prepare('UPDATE tasks SET status = ?, completed_at = ?, started_at = ? WHERE id = ?').run(o.fail ? 'failed' : 'done', end, start, t.id);
+  // 统计已迁到运行时间；夹具中的任务与运行必须描述同一段历史。
+  D.db().prepare('UPDATE runs SET ended_at = ?, started_at = ? WHERE task_id = ?').run(end, start, t.id);
   return t.id;
 }
 

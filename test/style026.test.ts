@@ -107,17 +107,12 @@ describe('026 · 荧光黄绿只做填充', () => {
   // 每一段选择器 + 声明块，看看谁把 --accent 当字色用。
   const blocks = [...CSS.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({ sel: m[1].trim(), body: m[2] }));
 
-  test('color: var(--accent) 只出现在墨色底上（品牌标记、深色按钮里的图标）', () => {
+  test('荧光黄绿只做填充：没有任何一处把它当字色', () => {
+    // 品牌标记换成内联 SVG（松绿底 + 米白 P）以后，全站不再有「墨底 + 荧光字」的文字规则。
     const offenders = blocks.filter((b) => /(^|[^-])color:\s*var\(--accent\)/.test(b.body));
-    assert.ok(offenders.length > 0, '这几处本来就该存在（否则测试没测到东西）');
-    for (const b of offenders) {
-      // 044：深浅两套里「墨色块」统一叫 --solid（浅色是墨色，深色是浅色块配墨字）。
-      const onInk = /background:\s*var\(--(ink|solid|brand-bg)\)/.test(b.body) || /background:\s*#18181B/i.test(b.body);
-      // 图标规则只写颜色，底色由它所在的那个深色按钮给（.btn.primary svg 之类）。
-      const iconOnDark = /(svg|brand-mark)/.test(b.sel);
-      assert.ok(onInk || iconOnDark, `「${b.sel}」把荧光黄绿当字色，但底色不是墨色：${b.body.trim()}`);
-    }
-    assert.ok(blocks.some((b) => /background:\s*var\(--(ink|solid|brand-bg)\)/.test(b.body) && /color:\s*var\(--accent\)/.test(b.body)), '至少有一处是「墨底 + 荧光字」');
+    assert.deepEqual(offenders.map((b) => b.sel), [], '荧光黄绿只能当底色/边框，不能当字色');
+    // 但它仍然在当底色用，不是被彻底删掉。
+    assert.ok(blocks.some((b) => /background:\s*var\(--accent\)/.test(b.body)), '至少还有一处拿它当底色');
   });
 
   test('没有把 --accent 用在 border-color 以外的白色背景上', () => {

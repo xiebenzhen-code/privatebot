@@ -157,7 +157,7 @@ export function crewRow(): Safe {
 
 /** 016: one nav row per top-level item; executors live inside 剧组/看板 as filters and cards. */
 export function layout(opts: {
-  title: string; section: SectionKey; tab?: string; body: Safe; assetVersion: string; collapsed?: boolean;
+  title: string; section: SectionKey; tab?: string; body: Safe; assetVersion: string;
   /** 044：'light' / 'dark' = 用户手动选的；空 = 跟随系统。存在 cookie 里，服务端直接写进 <html>，不会先白后黑。 */
   theme?: '' | 'light' | 'dark';
   /** 044：页面壳左上角标题下面那一小行。 */
@@ -181,9 +181,11 @@ export function layout(opts: {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${waitingCount() ? `(${waitingCount()}) ` : ''}${opts.title} · 我的工作台</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' rx='22' fill='%231E5B4A'/%3E%3Cpath d='M34 72V28h16a14 14 0 0 1 0 28H34' fill='none' stroke='%23F4F1EA' stroke-width='10' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='68' cy='68' r='7' fill='%239CCDB8'/%3E%3C/svg%3E">
+<link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png?v=${opts.assetVersion}">
+<link rel="icon" type="image/png" sizes="512x512" href="/static/icon-512.png?v=${opts.assetVersion}">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#1E5B4A">
-<link rel="apple-touch-icon" href="/static/icon-192.png">
+<link rel="apple-touch-icon" sizes="192x192" href="/static/icon-192.png?v=${opts.assetVersion}">
 <link rel="stylesheet" href="/static/style.css?v=${opts.assetVersion}">
 <script src="/static/app.js?v=${opts.assetVersion}" defer></script>
 </head>

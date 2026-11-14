@@ -8,6 +8,7 @@
 import { db } from '../db.ts';
 import { dayOf } from '../domain.ts';
 import type { Task } from './tasks.ts';
+import type { Run } from './runs.ts';
 
 export type Outcome = 'first_pass' | 'rework' | 'takeover' | 'failed' | 'unfinished';
 
@@ -45,6 +46,27 @@ export function factsOf(ids: number[]): Map<number, Facts> {
   const fails = db().prepare(`SELECT task_id FROM events
     WHERE task_id IN (${holes}) AND kind = 'task.status' AND text LIKE '%→ 失败%'`).all(...ids) as { task_id: number }[];
   for (const r of fails) bump(r.task_id, (x) => ({ ...x, changes: x.changes + 1, retried: true }));
+  // 运行记录是失败的直接证据；同一次失败已有事件时不再加一遍。
+  const eventFailures = new Map<number, number>();
+  for (const r of fails) eventFailures.set(r.task_id, (eventFailures.get(r.task_id) ?? 0) + 1);
+  const runFailures = db().prepare(`SELECT r.task_id, COUNT(*) n FROM runs r
+    WHERE r.task_id IN (${holes}) AND r.outcome = 'failed' AND r.backfilled = 0
+      AND (EXISTS (SELECT 1 FROM runs later WHERE later.task_id = r.task_id AND later.attempt > r.attempt
+        AND later.outcome IN ('done', 'failed', 'taken_over'))
+        OR EXISTS (SELECT 1 FROM tasks t WHERE t.id = r.task_id AND t.status = 'done'))
+    GROUP BY r.task_id`)
+    .all(...ids) as { task_id: number; n: number }[];
+  for (const r of runFailures) bump(r.task_id, (x) => ({
+    ...x, changes: x.changes + Math.max(0, r.n - (eventFailures.get(r.task_id) ?? 0)), retried: true,
+  }));
+  // 换人审查可留下同一轮的多条记录，一轮打回只算一次。
+  const reviews = db().prepare(`SELECT task_id, COUNT(DISTINCT round) n FROM reviews
+    WHERE task_id IN (${holes}) AND verdict = 'changes' GROUP BY task_id`)
+    .all(...ids) as { task_id: number; n: number }[];
+  for (const r of reviews) bump(r.task_id, (x) => ({ ...x, changes: x.changes + r.n }));
+  const takeovers = db().prepare(`SELECT DISTINCT task_id FROM runs
+    WHERE task_id IN (${holes}) AND outcome = 'taken_over' AND backfilled = 0`).all(...ids) as { task_id: number }[];
+  for (const r of takeovers) bump(r.task_id, (x) => ({ ...x, takeover: true }));
   return out;
 }
 
@@ -182,42 +204,62 @@ function accountable(t: Task, firstRun?: string): string | null {
 }
 
 /**
- * 每个任务第一次开跑的执行者（`runs` 里 attempt 最小的那条）。
+ * 每个任务第一条有效运行；到限额、取消、提问暂停、进行中不作为能力样本。
  * 回填来的运行、而任务本身又没记过 first_executor 的**不算**：回填时拿「现在的执行者」顶上是猜的，
  * 041 的底线是读不出来就留空，不能因为换了张表就把猜的数算进战绩（031a.1）。
  */
-export function firstRunExecutors(ids: number[]): Map<number, string> {
-  const out = new Map<number, string>();
-  if (!ids.length) return out;
+export function firstScoredRuns(ids: number[]): { first: Map<number, Run>; recorded: Set<number> } {
+  const first = new Map<number, Run>();
+  const recorded = new Set<number>();
+  if (!ids.length) return { first, recorded };
   const holes = ids.map(() => '?').join(',');
-  const rows = db().prepare(`SELECT r.task_id, r.executor, r.backfilled, t.first_executor
+  const rows = db().prepare(`SELECT r.*, t.first_executor
     FROM runs r JOIN tasks t ON t.id = r.task_id
     WHERE r.task_id IN (${holes})
-      AND r.attempt = (SELECT MIN(attempt) FROM runs WHERE task_id = r.task_id)
-    ORDER BY r.id`).all(...ids) as { task_id: number; executor: string; backfilled: number; first_executor: string | null }[];
+    ORDER BY r.task_id, r.attempt, r.id`).all(...ids) as (Run & { first_executor: string | null })[];
   for (const r of rows) {
-    if (out.has(r.task_id)) continue;
+    recorded.add(r.task_id);
+    if (first.has(r.task_id) || !['done', 'failed', 'taken_over'].includes(r.outcome) || !r.ended_at) continue;
     if (r.backfilled && !String(r.first_executor ?? '').trim()) continue;
-    out.set(r.task_id, r.executor);
+    first.set(r.task_id, r);
   }
-  return out;
+  return { first, recorded };
+}
+
+export function firstRunExecutors(ids: number[]): Map<number, string> {
+  return new Map([...firstScoredRuns(ids).first].map(([id, r]) => [id, r.executor]));
 }
 
 /**
- * 最近 `days` 天（默认 30）的已结束任务，按完成时间算，日历日按 WB_TZ。
+ * 最近 `days` 天（默认 30）的已结束任务；有运行记录时按首次有效运行结束日、耗时和token，旧任务退回原字段。
  * 窗口是「今天 + 前 days-1 天」：days=30 时，第 31 天完成的不算。
  * 战绩和能力档案（capability.ts）共用这一份，窗口口径不能各算各的。
+ *
+ * `by`：窗口按哪一天算。默认 `'run'`（首轮有效运行结束日）——战绩/能力要的是「这单第一次交活是什么时候」。
+ * 完成账目传 `'finished'`（任务真正完成的那一天）：跨周的活今天才做完，得算在这周，
+ * 否则它既进不了上周也进不了这周，「这周做完几件」会整单丢掉。
  */
-export function endedWindow(daysIn: number | undefined, now: Date = new Date()): { days: number; from: string; ended: Task[] } {
+export function endedWindow(daysIn: number | undefined, now: Date = new Date(), opts: { by?: 'run' | 'finished' } = {}): { days: number; from: string; ended: Task[] } {
   const raw = Number(daysIn ?? 30);
   const days = Math.min(Math.max(Number.isFinite(raw) ? Math.trunc(raw) : 30, 1), 365);
   const from = dayOf(new Date(now.getTime() - (days - 1) * 86400000));
   // 先按 ISO 粗筛（多留一天，免得时区把边界上的那单切掉），再用日历日精确判。
   const coarse = new Date(now.getTime() - (days + 1) * 86400000).toISOString();
-  const ended = (db().prepare(`SELECT * FROM tasks
+  const candidates = db().prepare(`SELECT * FROM tasks
     WHERE status IN ('done', 'failed') AND completed_at IS NOT NULL AND completed_at >= ?
-    ORDER BY completed_at DESC`).all(coarse) as Task[])
-    .filter((t) => dayOf(t.completed_at!) >= from);
+    ORDER BY completed_at DESC`).all(coarse) as Task[];
+  const { first, recorded } = firstScoredRuns(candidates.map((t) => t.id));
+  const ended = candidates.flatMap((t): Task[] => {
+    const r = first.get(t.id);
+    if (!r) {
+      // 只有中性运行的不进样本；来源不明的历史回填仍交给skipped计数。
+      if (recorded.has(t.id) && String(t.first_executor ?? '').trim()) return [];
+      return [t];
+    }
+    return [{ ...t, first_executor: r.executor, started_at: r.started_at, completed_at: r.ended_at,
+      tokens_used: r.tokens, backend: r.backend, route: r.route, finished_at: t.completed_at }];
+  })
+    .filter((t) => dayOf((opts.by === 'finished' ? (t.finished_at ?? t.completed_at) : t.completed_at)!) >= from);
   return { days, from, ended };
 }
 

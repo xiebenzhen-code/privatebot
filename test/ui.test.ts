@@ -165,7 +165,9 @@ describe('016 · navigation', () => {
       assert.ok(page.text.includes(word), `${path} has ${word}`);
     }
     const appearance = await api('/settings/appearance');
-    assert.ok(appearance.text.includes('data-side-default="collapsed"'), 'sidebar default lives in 外观');
+    // 061 之后没有侧栏了，外观里不该再出现「侧边栏」这个开关。
+    assert.ok(!appearance.text.includes('data-side-default'), 'no sidebar default to set');
+    assert.ok(!appearance.text.includes('侧边栏'), 'no sidebar panel left in 外观');
     const security = await api('/settings/security');
     assert.ok(security.text.includes('暂停所有自动执行') || security.text.includes('恢复自动执行'));
   });
@@ -266,11 +268,14 @@ describe('016 · what each page shows', () => {
     }
   });
 
-  test('the phone layout is a bottom icon bar and the tabs scroll sideways', () => {
+  test('the phone layout is one column: no bottom bar, tabs scroll sideways', () => {
     const css = readFileSync(join(ROOT, 'public', 'style.css'), 'utf8');
-    const phone = css.slice(css.indexOf('@media (max-width: 820px)'), css.indexOf('/* ---------- page header', css.indexOf('@media (max-width: 820px)')));
-    assert.match(phone, /position: fixed/);
-    assert.match(phone, /\.nav-label \{ display: none; \}/);
+    const start = css.indexOf('@media (max-width: 820px)');
+    const phone = css.slice(start, css.indexOf('/* ---------- page header', start));
+    // 061 之后没有侧栏，也就没有手机底栏；旧侧栏样式不该再回来
+    assert.ok(!phone.includes('position: fixed'), 'no bottom bar on a phone');
+    assert.ok(!/\.nav-/.test(phone), 'no old nav labels');
+    assert.match(phone, /\.field-row \{ grid-template-columns: minmax\(0, 1fr\); \}/);
     assert.match(css, /\.seg \{[^}]*overflow-x: auto/);
     assert.match(css, /body \{ overflow-x: hidden; \}/);
   });

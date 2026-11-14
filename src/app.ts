@@ -31,6 +31,7 @@ import { createSlot, listRuns, listSlots, orderedSlots, updateSlot } from './ser
 import { answerAsk, cancelAsks, hasAnswered, listAsks, openAsk, takeResume } from './services/asks.ts';
 import { commentOnTask, finishComment, githubRepos, importIssues, pushComment, recordGithubSync } from './services/github.ts';
 import { claimGithubJob, finishGithubJob } from './services/github-outbox.ts';
+import { modelCatalogs, receiveModelCatalog } from './services/model-catalog.ts';
 import { stuckFor } from './services/stage.ts';
 import { activeTaskIds, deleteRequests, finishCleanup, reportScan, requestDelete, snoozeBranch } from './services/branches.ts';
 import { createRequest as createProjectRequest, finishRequest as finishProjectRequest, listRequests as listProjectRequests, nextRequest as nextProjectRequest } from './services/projects.ts';
@@ -116,10 +117,9 @@ const themeOf = (req: IncomingMessage): '' | 'light' | 'dark' => {
   const m = /(?:^|;\s*)wb_theme=(light|dark)(?:;|$)/.exec(req.headers.cookie ?? '');
   return m ? (m[1] as 'light' | 'dark') : '';
 };
-const sideCollapsed = (req: IncomingMessage) => /(?:^|;\s*)wb_side=collapsed(?:;|$)/.test(req.headers.cookie ?? '');
 const page = (c: Ctx, title: string, section: SectionKey, tab: string | undefined, body0: Safe): Result => ({
   // 044 v3：任务页自己会画抽屉；其他页带 ?task= 时在页面末尾补上详情面板。
-  html: layout({ title, section, tab, body: section === 'tasks' ? body0 : html`${body0}${taskPanel(c.url.searchParams, c.url.pathname)}`, assetVersion: ASSET_VERSION, collapsed: sideCollapsed(c.req), theme: themeOf(c.req) }),
+  html: layout({ title, section, tab, body: section === 'tasks' ? body0 : html`${body0}${taskPanel(c.url.searchParams, c.url.pathname)}`, assetVersion: ASSET_VERSION, theme: themeOf(c.req) }),
 });
 const actor = (c: Ctx) => (c.auth === 'bearer' ? String(c.body.actor ?? c.url.searchParams.get('actor') ?? 'system') : 'me');
 
@@ -170,7 +170,7 @@ on('GET', '/settings', (c) => {
   if (old) return { redirect: old };
   return page(c, '设置', 'settings', '__home', settingsHome());
 }, { page: true });
-on('GET', '/settings/:tab', (c) => sectionRoute(c, 'settings', c.params[0], (tab) => settingsPage(baseUrlOf(c), tab as SettingsTab, sideCollapsed(c.req))), { page: true });
+on('GET', '/settings/:tab', (c) => sectionRoute(c, 'settings', c.params[0], (tab) => settingsPage(baseUrlOf(c), tab as SettingsTab)), { page: true });
 
 // ---------- installable app (PWA) ----------
 on('GET', '/manifest.webmanifest', () => ({
@@ -183,9 +183,9 @@ on('GET', '/manifest.webmanifest', () => ({
     background_color: '#F4F4F0',
     theme_color: '#1E5B4A',
     icons: [
-      { src: '/static/icon-192.png', sizes: '192x192', type: 'image/png' },
-      { src: '/static/icon-512.png', sizes: '512x512', type: 'image/png' },
-      { src: '/static/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      { src: `/static/icon-192.png?v=${ASSET_VERSION}`, sizes: '192x192', type: 'image/png' },
+      { src: `/static/icon-512.png?v=${ASSET_VERSION}`, sizes: '512x512', type: 'image/png' },
+      { src: `/static/icon-maskable-512.png?v=${ASSET_VERSION}`, sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ],
   }, null, 2),
   type: 'application/manifest+json',
@@ -532,6 +532,13 @@ on('POST', '/api/runner/tasks/:id/pushed', (c) => {
   return { json: { ok: true } };
 });
 on('POST', '/api/runner/heartbeat', (c) => ({ json: runnerHeartbeat(String(c.body?.runner ?? c.body?.id ?? ''), c.body?.meta) }));
+on('POST', '/api/runner/models', (c) => {
+  if (c.auth !== 'bearer') throw new HttpError(403, '模型目录只接受执行器上报');
+  return { json: receiveModelCatalog(c.body?.runner, c.body?.catalog) };
+});
+on('GET', '/api/model-catalogs', (c) => ({ json: { catalogs: modelCatalogs({
+  executor: c.url.searchParams.get('executor') ?? '', project: c.url.searchParams.get('project') ?? '',
+}) } }));
 function githubRunnerOnly(c: Ctx): void {
   if (c.auth !== 'bearer') throw new HttpError(403, 'GitHub 转发只接受执行器令牌');
 }

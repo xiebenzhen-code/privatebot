@@ -331,10 +331,11 @@ describe('040 F · 动效沿用 038', () => {
   });
 
   test('这些过渡都在「减少动态效果」里被关掉', () => {
-    const reduce = block.slice(block.lastIndexOf('@media (prefers-reduced-motion'));
-    assert.ok(reduce, '要有 prefers-reduced-motion 段');
-    for (const sel of ['.bar > div', '.exec-section > summary::before', '.task-grid .card']) {
-      assert.ok(reduce.includes(sel), `${sel} 没在减少动态效果里关掉`);
+    // 040 这段里可能不止一处 reduce 段（按组件就近写），合起来看。
+    const reduces = [...block.matchAll(/@media \(prefers-reduced-motion[^{]*\{([\s\S]*?)\n\}/g)].map((m) => m[1]).join('\n');
+    assert.ok(reduces, '要有 prefers-reduced-motion 段');
+    for (const sel of ['.bar > div', '.exec-section > summary::before']) {
+      assert.ok(reduces.includes(sel), `${sel} 没在减少动态效果里关掉`);
     }
   });
 

@@ -20,6 +20,7 @@ import { dirname, join, resolve, basename } from 'node:path';
 import { addRemote, cloneProject, createProject } from './lib/projects.mjs';
 import { deployDirs, needsDeploy, runDeploy, shouldDeploy } from './lib/deploy.mjs';
 import { githubRelayRound } from './lib/github-relay.mjs';
+import { createCatalogReporter } from './lib/magpie-catalog.mjs';
 import { getProvider } from './lib/sandbox/provider.mjs';
 import { parseAsk, resumeArgs, resumeData, resumeLost, resumeMessage } from './lib/ask.mjs';
 import { anySandbox, applySandboxPatch, createSlots, diskLimitMb, flagLine, runInSandbox, sandboxCap, sandboxModeFor, sandboxPlan } from './lib/sandbox/run.mjs';
@@ -2906,6 +2907,15 @@ async function main() {
   };
   const beat = setInterval(() => { void heartbeat(); }, HEARTBEAT_MS);
   await heartbeat();
+  // 068.1：可选只读目录刷新，和任务领取/心跳分开，不等待Magpie或调用模型。
+  const reportCatalog = createCatalogReporter(cfg, runnerId, (method, path, body) => api(cfg, method, path, body));
+  let catalogWarned = false;
+  const refreshCatalog = () => void reportCatalog().then(() => { catalogWarned = false; }).catch(() => {
+    if (!catalogWarned) log('模型目录暂时没报上，下一轮再试');
+    catalogWarned = true;
+  });
+  const catalogTimer = cfg.magpie === undefined ? null : setInterval(refreshCatalog, 60_000);
+  if (catalogTimer) refreshCatalog();
   log(`执行器 ${runnerId} 启动，执行者：${executors.join(', ')}（代码 ${bootHash.slice(0, 8)}）`);
 
   // 031a: 启动时扫一次，之后每 6 小时一次。扫描本身不删「有成果」的分支，删什么由工作台决定。
@@ -2971,6 +2981,7 @@ async function main() {
     }
   } finally {
     clearInterval(beat);
+    if (catalogTimer) clearInterval(catalogTimer);
   }
 }
 

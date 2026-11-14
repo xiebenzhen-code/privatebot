@@ -13,6 +13,11 @@ export type Task = {
   project: string; status: string; progress: number | null; step: string;
   session_id: string | null; session_url: string;
   created_at: string; updated_at: string; started_at: string | null; completed_at: string | null;
+  /**
+   * 不是 tasks 表字段。045 收尾把 `completed_at` 换成首轮运行结束时间后，由 `endedWindow` 顺带留下
+   * 任务真正完成的那一刻：账目的「这周做完几件」按完成日分桶，不能跟着首轮跑，否则跨周的活整单不见。
+   */
+  finished_at?: string;
   mode: 'auto' | 'manual';
   runner_id: string | null; runner_log: string; branch: string | null;
   tokens_used: number; start_requested: number;

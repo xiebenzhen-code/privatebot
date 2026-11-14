@@ -279,38 +279,6 @@
     document.addEventListener('visibilitychange', poll);
   }
 
-  // Sidebar: [ toggles on desktop. State lives in a cookie so the server renders it without a flash.
-  const app = document.querySelector('.app');
-  const sideToggle = document.querySelector('[data-side-toggle]');
-  function setSide(collapsed) {
-    if (!app) return;
-    app.classList.toggle('side-collapsed', collapsed);
-    document.cookie = `wb_side=${collapsed ? 'collapsed' : 'open'}; Path=/; Max-Age=31536000; SameSite=Lax`;
-    if (sideToggle) {
-      sideToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-      sideToggle.setAttribute('aria-label', collapsed ? '展开侧边栏' : '收起侧边栏');
-    }
-  }
-  if (sideToggle) {
-    sideToggle.addEventListener('click', () => setSide(!app.classList.contains('side-collapsed')));
-  }
-  // 外观 › 侧边栏：记在同一个 cookie 里，服务端下次直接按它渲染，不会闪。
-  document.addEventListener('click', (ev) => {
-    const btn = ev.target.closest && ev.target.closest('[data-side-default]');
-    if (!btn) return;
-    ev.preventDefault();
-    setSide(btn.dataset.sideDefault === 'collapsed');
-    location.reload();
-  });
-  document.addEventListener('keydown', (ev) => {
-    if (ev.key !== '[' || ev.ctrlKey || ev.altKey || ev.metaKey) return;
-    const el = document.activeElement;
-    if (el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || el.isContentEditable)) return;
-    if (!app || !sideToggle) return;
-    ev.preventDefault();
-    setSide(!app.classList.contains('side-collapsed'));
-  });
-
   // 044：深浅色。点一下在浅色和深色之间切；选择记在 cookie 里，服务端下次直接写进 <html>，不会闪白
   // （不用 localStorage + 内联脚本：服务端一开始就知道，省一段必须内联的脚本）。
   // 想回到「跟随系统」：设置 › 外观。顶栏会随页面一起被换掉，所以用委托，不绑在按钮本身上。
@@ -472,15 +440,6 @@
         // 同一页换参数（这周 ↔ 这个月、进出详情）：内容原地换，不再放一遍「抬上来」的进场动画。
         if (new URL(finalUrl, location.href).pathname === location.pathname) nextMain.classList.add('no-enter');
         curMain.replaceWith(nextMain);
-        const nav2 = document.querySelector('#wb-side .nav');
-        const nextNav = doc.querySelector('#wb-side .nav');
-        if (nav2 && nextNav) nav2.replaceWith(nextNav);
-        const q = document.querySelector('#wb-side .quota');
-        const nextQ = doc.querySelector('#wb-side .quota');
-        if (q && nextQ && !q.open) q.replaceWith(nextQ);
-        const st = document.querySelector('#wb-side .side-status');
-        const nextSt = doc.querySelector('#wb-side .side-status');
-        if (st && nextSt) st.replaceWith(nextSt);
         document.title = doc.title;
         if (!reload && o.push !== false) {
           try { history.replaceState({ wb: 1, y }, ''); } catch (e) { /* 记不下离开时的滚动位置也无妨 */ }

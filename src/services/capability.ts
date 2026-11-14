@@ -11,7 +11,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { db } from '../db.ts';
 import { CATEGORIES } from '../domain.ts';
-import { FEW, endedWindow, factsOf, judge } from './scorecard.ts';
+import { FEW, endedWindow, factsOf, firstScoredRuns, judge } from './scorecard.ts';
 
 export type Level = 'strong' | 'medium' | 'weak';
 export const LEVEL_RATE: Record<Level, number> = { strong: 0.8, medium: 0.6, weak: 0.4 };
@@ -113,20 +113,16 @@ export function samples(days = WINDOW_DAYS, now: Date = new Date()): Sample[] {
   const { ended } = endedWindow(days, now);
   if (!ended.length) return [];
   const ids = ended.map((t) => t.id);
-  const holes = ids.map(() => '?').join(',');
   const facts = factsOf(ids);
-  const rows = db().prepare(`SELECT task_id, executor, harness, model FROM runs
-    WHERE task_id IN (${holes}) AND outcome NOT IN ('limited', 'cancelled', 'running', 'asked')
-    ORDER BY task_id, attempt, id`).all(...ids) as { task_id: number; executor: string; harness: string; model: string }[];
-  const first = new Map<number, { executor: string; harness: string; model: string }>();
-  for (const r of rows) if (!first.has(r.task_id)) first.set(r.task_id, r);
+  const { first } = firstScoredRuns(ids);
 
   const out: Sample[] = [];
   for (const t of ended) {
     const r = first.get(t.id);
     if (!r || !r.harness || !r.model || r.executor === 'me') continue;
     const outcome = judge(t, facts.get(t.id));
-    if (outcome === 'unfinished') continue;
+    // 041 的底线是「接手优先」：被你接过去的单不算执行者的失败，也就不能当模型的失败样本。
+    if (outcome === 'unfinished' || outcome === 'takeover') continue;
     out.push({ harness: r.harness, model: r.model, category: t.category, pass: outcome === 'first_pass' });
   }
   return out;

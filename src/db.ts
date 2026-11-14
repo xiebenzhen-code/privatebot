@@ -633,6 +633,8 @@ export const MIGRATIONS: string[] = [
   `ALTER TABLE executor_settings ADD COLUMN resting INTEGER NOT NULL DEFAULT 0;`,
   // 066：执行器自己跑测试的结果（JSON：status / cmd / code / tail / ms / why / where）。和执行者的说法对照用。
   `ALTER TABLE tasks ADD COLUMN verify TEXT NOT NULL DEFAULT '';`,
+  // 068.1：单独保存有界模型目录，不塞进只有2000字符的heartbeat.meta；旧执行器默认为空。
+  `ALTER TABLE runners ADD COLUMN model_catalog TEXT NOT NULL DEFAULT '';`,
 ];
 
 export function openDb(file: string = process.env.WB_DB ?? './data/workbench.db', opts: { at?: number } = {}): DB {
